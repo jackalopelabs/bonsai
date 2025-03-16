@@ -4,7 +4,8 @@
 
 <div {{ $attributes->merge(['class' => 'jackalope-game-container relative w-full h-[500px] rounded-lg overflow-hidden shadow-lg ' . $class]) }}
      x-data="jackalope3DGame"
-     x-init="initGame">
+     x-init="initGame"
+     x-on:beforeunload.window="destroy">
     <canvas x-ref="gameCanvas" class="w-full h-full"></canvas>
     
     <div class="absolute bottom-4 left-4 right-4 flex justify-between">
