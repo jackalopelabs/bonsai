@@ -1,0 +1,17 @@
+# Created by trellis-cli v1.13.0
+# Documentation: https://roots.io/trellis/docs/wordpress-sites/
+
+wordpress_sites:
+  chosen.bonsai.so:
+    site_hosts:
+    - canonical: chosen.bonsai.test
+      redirects: []
+    local_path: ../site
+    admin_email: admin@chosen.bonsai.test
+    multisite:
+      enabled: false
+    ssl:
+      enabled: false
+      provider: self-signed
+    cache:
+      enabled: false
