@@ -5,6 +5,7 @@ import.meta.glob([
 
 import alpine from 'alpinejs';
 import PixelMatrix from './pixel-matrix';
+import jackalope3DGame from './jackalope-game';
 
 // Initialize PixelMatrix on pricing boxes
 document.addEventListener('DOMContentLoaded', () => {
@@ -27,6 +28,9 @@ document.addEventListener('alpine:init', () => {
       document.body.classList.toggle('dark', this.on);
     }
   });
+
+  // Register jackalope3DGame component
+  alpine.data('jackalope3DGame', jackalope3DGame);
 
   // Make darkMode accessible in Alpine components
   alpine.data('globalData', () => ({
