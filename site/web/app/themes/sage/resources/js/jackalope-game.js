@@ -70,7 +70,8 @@ function createGameInstance() {
   let canvas = null;
   let gameContainer = null;
   
-  const playerSpeed = 0.1;
+  // Game settings - reduced speed for better control
+  const playerSpeed = 0.05;
   const carrotSpawnRate = 3000; // ms
   const obstacleSpawnRate = 5000; // ms
   let lastCarrotSpawn = 0;
@@ -93,14 +94,14 @@ function createGameInstance() {
   // Bouncing animation state
   let velocityY = 0;
   let positionY = 0;
-  const gravity = -0.05;
-  const bounceFactor = 0.7;
+  const gravity = -0.03; // Reduced gravity for smoother jumps
+  const bounceFactor = 0.5; // Reduced bounce for more control
   let isMoving = false; // Track if player is moving to trigger bounce
   
   // Jumping state
   let isJumping = false;
-  const jumpForce = 0.3;
-  const jumpCooldown = 800; // ms
+  const jumpForce = 0.4; // Increased from 0.2 for higher jumps
+  const jumpCooldown = 500; // ms - reduced cooldown for more responsive jumps
   let lastJumpTime = 0;
   
   function init(canvasElement, stateCallbacks) {
@@ -493,8 +494,9 @@ function createGameInstance() {
       carrotGroup.add(leaf);
     }
     
-    const x = (Math.random() - 0.5) * 20;
-    const z = (Math.random() - 0.5) * 20;
+    // Spawn carrots in a smaller area for easier collection
+    const x = (Math.random() - 0.5) * 15;
+    const z = (Math.random() - 0.5) * 15;
     carrotGroup.position.set(x, 0, z);
     scene.add(carrotGroup);
     carrots.push(carrotGroup);
@@ -508,8 +510,10 @@ function createGameInstance() {
       roughness: 0.9,
     });
     const obstacle = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
-    const x = (Math.random() - 0.5) * 20;
-    const z = (Math.random() - 0.5) * 20;
+    
+    // Spawn obstacles in a smaller area
+    const x = (Math.random() - 0.5) * 15;
+    const z = (Math.random() - 0.5) * 15;
     obstacle.position.set(x, 0.8, z);
     obstacle.rotation.y = Math.random() * Math.PI * 2;
     obstacle.castShadow = true;
@@ -529,10 +533,16 @@ function createGameInstance() {
     if (isMoving) {
       const angle = Math.atan2(moveX, moveZ);
       player.rotation.y = angle;
-      const speed = playerSpeed * deltaTime;
+      
+      // Apply speed with delta time normalization
+      const normalizedDelta = Math.min(deltaTime, 33); // Cap delta at 33ms (30fps) to prevent huge jumps
+      const speed = playerSpeed * normalizedDelta;
+      
       player.position.x += Math.sin(angle) * speed;
       player.position.z += Math.cos(angle) * speed;
-      const boundaryLimit = 24;
+      
+      // Keep player within bounds - smaller boundary for better gameplay
+      const boundaryLimit = 20;
       player.position.x = Math.max(-boundaryLimit, Math.min(boundaryLimit, player.position.x));
       player.position.z = Math.max(-boundaryLimit, Math.min(boundaryLimit, player.position.z));
     }
@@ -541,8 +551,11 @@ function createGameInstance() {
   function updateBounce(deltaTime) {
     if (isPaused || showInstructions || gameOver) return;
     
+    // Normalize delta time to prevent huge jumps
+    const normalizedDelta = Math.min(deltaTime, 33);
+    
     // Apply gravity
-    velocityY += gravity * deltaTime * 0.06;
+    velocityY += gravity * normalizedDelta * 0.06;
     positionY += velocityY;
     
     // Handle ground collision
@@ -596,15 +609,22 @@ function createGameInstance() {
     for (let i = 0; i < obstacles.length; i++) {
       const obstacle = obstacles[i];
       const obstaclePos = new THREE.Vector3().copy(obstacle.position);
-      obstaclePos.y = playerPos.y;
-      const distance = playerPos.distanceTo(obstaclePos);
-      if (distance < playerRadius + 0.8) {
-        setGameOver(true);
-        setIsPaused(true);
-        setTimeout(() => {
-          setShowInstructions(true);
-        }, 1500);
-        break;
+      
+      // Check if player is jumping high enough over the obstacle
+      const jumpingOverObstacle = positionY > 1.2; // Minimum height to clear an obstacle
+      
+      // Only check horizontal distance if not jumping high enough
+      if (!jumpingOverObstacle) {
+        obstaclePos.y = playerPos.y;
+        const distance = playerPos.distanceTo(obstaclePos);
+        if (distance < playerRadius + 0.8) {
+          setGameOver(true);
+          setIsPaused(true);
+          setTimeout(() => {
+            setShowInstructions(true);
+          }, 1500);
+          break;
+        }
       }
     }
   }
