@@ -57,7 +57,8 @@ If we're not using Radicle, and the project is empty (other than this file)– t
 - Start Lima VM (which will provision development): `trellis vm start` (Make sure this completes before moving on)
 - Align Lima VM with /etc/hosts and SSH Config (instructions below)
 - Configure `site/wp-cli.yml` to use the @development, @staging, and @production aliases
-- Activate Sage 11: `wp @development theme activate sage` (make sure this completes before moving on, run it /site directory, not project root)
+- Run: `ssh [sitename-tld.test]` to test whether we can connect to our Lima vm
+- Activate Sage 11: `wp @development theme activate sage` (make sure this completes before moving on, run it /site directory, not project root. Do not proceed to the next step until this completes successfully. If you get `Error: Alias '@development' not found.` then you should go back to the previous step of aligning lima vm `/etc/hosts` and `.ssh/config`)
 - Go to the `site` directory and config Bonsai CLI: `composer config repositories.bonsai-cli vcs git@github.com:jackalopelabs/bonsai-cli.git`
 - Now require it: `composer require jackalopelabs/bonsai-cli:dev-kanban`
 – `wp @development acorn optimize:clear`
