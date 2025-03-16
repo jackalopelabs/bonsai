@@ -7,29 +7,25 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
  * A simple Three.js game where a jackalope collects carrots while avoiding obstacles
  */
 export default function jackalope3DGame() {
-  // Create a non-reactive game instance that won't be proxied by Alpine
   const game = createGameInstance();
   
-  // Return the Alpine component with minimal reactive properties
   return {
-    // Reactive state (these will be proxied by Alpine)
     score: 0,
     isPaused: false,
     showInstructions: true,
     gameOver: false,
+    isFullscreen: false,
     
-    // Initialize the game
     initGame() {
-      // Initialize the game with references to the reactive state
       game.init(this.$refs.gameCanvas, {
         onScoreChange: (newScore) => { this.score = newScore; },
         onPauseChange: (isPaused) => { this.isPaused = isPaused; },
         onInstructionsChange: (show) => { this.showInstructions = show; },
-        onGameOverChange: (isOver) => { this.gameOver = isOver; }
+        onGameOverChange: (isOver) => { this.gameOver = isOver; },
+        onFullscreenChange: (isFullscreen) => { this.isFullscreen = isFullscreen; }
       });
     },
     
-    // Game control methods
     startGame() {
       game.start();
     },
@@ -42,84 +38,84 @@ export default function jackalope3DGame() {
       game.reset();
     },
     
-    // Clean up resources when component is destroyed
+    toggleFullscreen() {
+      game.toggleFullscreen();
+    },
+    
     destroy() {
       game.destroy();
     }
   };
 }
 
-/**
- * Create a non-reactive game instance that won't be proxied by Alpine
- */
 function createGameInstance() {
-  // Game state
   let score = 0;
   let isPaused = false;
   let showInstructions = true;
   let gameOver = false;
+  let isFullscreen = false;
   let callbacks = {};
   
-  // Three.js objects
   let scene = null;
   let camera = null;
   let renderer = null;
   let clock = null;
   
-  // Game objects
   let player = null;
   let carrots = [];
   let obstacles = [];
   let ground = null;
   
-  // Game settings
+  // DOM elements
+  let canvas = null;
+  let gameContainer = null;
+  
   const playerSpeed = 0.1;
   const carrotSpawnRate = 3000; // ms
   const obstacleSpawnRate = 5000; // ms
   let lastCarrotSpawn = 0;
   let lastObstacleSpawn = 0;
   
-  // Input state
   const keys = {
     forward: false,
     backward: false,
     left: false,
     right: false,
+    jump: false
   };
   
-  // Animation frame ID for cancellation
   let animationFrameId = null;
-  
-  // Event handler references for cleanup
   let handleKeyDown = null;
   let handleKeyUp = null;
   let handleResize = null;
+  let handleFullscreenChange = null;
   
-  /**
-   * Initialize the game
-   */
-  function init(canvas, stateCallbacks) {
+  // Bouncing animation state
+  let velocityY = 0;
+  let positionY = 0;
+  const gravity = -0.05;
+  const bounceFactor = 0.7;
+  let isMoving = false; // Track if player is moving to trigger bounce
+  
+  // Jumping state
+  let isJumping = false;
+  const jumpForce = 0.3;
+  const jumpCooldown = 800; // ms
+  let lastJumpTime = 0;
+  
+  function init(canvasElement, stateCallbacks) {
+    canvas = canvasElement;
+    gameContainer = canvas.closest('.jackalope-game-container');
     callbacks = stateCallbacks;
-    
-    // Setup Three.js scene
     setupScene(canvas);
-    
-    // Setup event listeners
     setupEventListeners();
-    
-    // Start animation loop
     animate();
   }
   
-  /**
-   * Setup the Three.js scene
-   */
   function setupScene(canvas) {
-    // Create scene
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x87CEEB); // Sky blue
+    scene.background = new THREE.Color(0x87CEEB);
     
-    // Create camera
     camera = new THREE.PerspectiveCamera(
       75, 
       canvas.clientWidth / canvas.clientHeight, 
@@ -129,7 +125,6 @@ function createGameInstance() {
     camera.position.set(0, 5, 10);
     camera.lookAt(0, 0, 0);
     
-    // Create renderer
     renderer = new THREE.WebGLRenderer({ 
       canvas,
       antialias: true,
@@ -139,7 +134,6 @@ function createGameInstance() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     
-    // Add lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
     
@@ -150,7 +144,6 @@ function createGameInstance() {
     directionalLight.shadow.mapSize.height = 1024;
     scene.add(directionalLight);
     
-    // Create ground
     const groundGeometry = new THREE.PlaneGeometry(50, 50);
     const groundMaterial = new THREE.MeshStandardMaterial({ 
       color: 0x7CFC00,
@@ -161,117 +154,86 @@ function createGameInstance() {
     ground.receiveShadow = true;
     scene.add(ground);
     
-    // Create player (temporary box until model is loaded)
-    const playerGeometry = new THREE.BoxGeometry(1, 1, 2);
-    const playerMaterial = new THREE.MeshStandardMaterial({ color: 0x964B00 });
-    player = new THREE.Mesh(playerGeometry, playerMaterial);
-    player.position.y = 0.5;
-    player.castShadow = true;
-    scene.add(player);
+    // Create the bouncing rabbit as the player
+    createBouncingRabbit();
     
-    // Load jackalope model (replace the box when loaded)
-    loadJackalopeModel();
-    
-    // Initialize clock for animations
     clock = new THREE.Clock();
     
-    // Handle window resize
-    handleResize = () => onWindowResize(canvas);
+    handleResize = () => onWindowResize();
     window.addEventListener('resize', handleResize);
     
-    // Force initial resize to ensure correct dimensions
     setTimeout(() => {
-      onWindowResize(canvas);
+      onWindowResize();
     }, 100);
   }
   
-  /**
-   * Load the jackalope 3D model
-   */
-  function loadJackalopeModel() {
-    // In a real implementation, you would load a GLTF model
-    // For now, we'll create a simple jackalope-like shape
+  function createBouncingRabbit() {
+    // Create the rabbit group
+    player = new THREE.Group();
     
-    const body = new THREE.Group();
-    
-    // Body
-    const bodyGeometry = new THREE.CapsuleGeometry(0.5, 1, 4, 8);
+    // Body (low-poly elongated sphere)
+    const bodyGeometry = new THREE.CylinderGeometry(0.4, 0.4, 1, 6);
     const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x964B00 });
-    const bodyMesh = new THREE.Mesh(bodyGeometry, bodyMaterial);
-    bodyMesh.rotation.x = Math.PI / 2;
-    bodyMesh.castShadow = true;
-    body.add(bodyMesh);
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    body.position.y = 0.5;
+    body.castShadow = true;
+    player.add(body);
     
-    // Head
-    const headGeometry = new THREE.SphereGeometry(0.4, 16, 16);
-    const headMaterial = new THREE.MeshStandardMaterial({ color: 0x964B00 });
-    const headMesh = new THREE.Mesh(headGeometry, headMaterial);
-    headMesh.position.set(0, 0, -0.8);
-    headMesh.castShadow = true;
-    body.add(headMesh);
+    // Head (smaller sphere)
+    const headGeometry = new THREE.SphereGeometry(0.3, 6, 6);
+    const head = new THREE.Mesh(headGeometry, bodyMaterial);
+    head.position.set(0, 1.1, 0.3);
+    head.castShadow = true;
+    player.add(head);
     
-    // Ears
-    const earGeometry = new THREE.ConeGeometry(0.15, 0.5, 16);
-    const earMaterial = new THREE.MeshStandardMaterial({ color: 0x964B00 });
+    // Ears (two thin boxes)
+    const earGeometry = new THREE.BoxGeometry(0.1, 0.5, 0.05, 1, 1, 1);
+    const ear1 = new THREE.Mesh(earGeometry, bodyMaterial);
+    const ear2 = new THREE.Mesh(earGeometry, bodyMaterial);
+    ear1.position.set(-0.15, 1.5, 0.3);
+    ear2.position.set(0.15, 1.5, 0.3);
+    ear1.rotation.z = -0.2;
+    ear2.rotation.z = 0.2;
+    ear1.castShadow = true;
+    ear2.castShadow = true;
+    player.add(ear1);
+    player.add(ear2);
     
-    const leftEar = new THREE.Mesh(earGeometry, earMaterial);
-    leftEar.position.set(-0.2, 0.3, -0.8);
-    leftEar.castShadow = true;
-    body.add(leftEar);
+    // Legs (four small cylinders)
+    const legGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.3, 4);
+    const leg1 = new THREE.Mesh(legGeometry, bodyMaterial);
+    const leg2 = new THREE.Mesh(legGeometry, bodyMaterial);
+    const leg3 = new THREE.Mesh(legGeometry, bodyMaterial);
+    const leg4 = new THREE.Mesh(legGeometry, bodyMaterial);
+    leg1.position.set(-0.25, 0.15, -0.25);
+    leg2.position.set(0.25, 0.15, -0.25);
+    leg3.position.set(-0.25, 0.15, 0.25);
+    leg4.position.set(0.25, 0.15, 0.25);
+    leg1.castShadow = true;
+    leg2.castShadow = true;
+    leg3.castShadow = true;
+    leg4.castShadow = true;
+    player.add(leg1);
+    player.add(leg2);
+    player.add(leg3);
+    player.add(leg4);
     
-    const rightEar = new THREE.Mesh(earGeometry, earMaterial);
-    rightEar.position.set(0.2, 0.3, -0.8);
-    rightEar.castShadow = true;
-    body.add(rightEar);
-    
-    // Antlers
-    const antlerGeometry = new THREE.CylinderGeometry(0.03, 0.03, 0.5, 8);
-    const antlerMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
-    
-    const leftAntler = new THREE.Mesh(antlerGeometry, antlerMaterial);
-    leftAntler.position.set(-0.2, 0.6, -0.7);
-    leftAntler.rotation.x = -Math.PI / 4;
-    leftAntler.rotation.z = -Math.PI / 8;
-    leftAntler.castShadow = true;
-    body.add(leftAntler);
-    
-    const rightAntler = new THREE.Mesh(antlerGeometry, antlerMaterial);
-    rightAntler.position.set(0.2, 0.6, -0.7);
-    rightAntler.rotation.x = -Math.PI / 4;
-    rightAntler.rotation.z = Math.PI / 8;
-    rightAntler.castShadow = true;
-    body.add(rightAntler);
-    
-    // Legs
-    const legGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.6, 8);
-    const legMaterial = new THREE.MeshStandardMaterial({ color: 0x964B00 });
-    
-    const positions = [
-      [-0.3, -0.5, 0.3],  // Front left
-      [0.3, -0.5, 0.3],   // Front right
-      [-0.3, -0.5, -0.3], // Back left
-      [0.3, -0.5, -0.3],  // Back right
-    ];
-    
-    positions.forEach(pos => {
-      const leg = new THREE.Mesh(legGeometry, legMaterial);
-      leg.position.set(...pos);
-      leg.castShadow = true;
-      body.add(leg);
-    });
-    
-    // Replace the placeholder box with our jackalope model
-    scene.remove(player);
-    player = body;
+    // Initial position
     player.position.y = 0.8;
     scene.add(player);
   }
   
-  /**
-   * Setup event listeners for keyboard input
-   */
   function setupEventListeners() {
-    // Keyboard events
+    // Prevent spacebar from scrolling the page
+    const preventSpacebarScroll = (e) => {
+      if (e.key === ' ' && !showInstructions && !gameOver) {
+        e.preventDefault();
+      }
+    };
+    
+    window.addEventListener('keydown', preventSpacebarScroll);
+    
+    // Game controls
     handleKeyDown = (event) => {
       if (showInstructions || gameOver) return;
       
@@ -279,22 +241,36 @@ function createGameInstance() {
         case 'w':
         case 'arrowup':
           keys.forward = true;
+          event.preventDefault();
           break;
         case 's':
         case 'arrowdown':
           keys.backward = true;
+          event.preventDefault();
           break;
         case 'a':
         case 'arrowleft':
           keys.left = true;
+          event.preventDefault();
           break;
         case 'd':
         case 'arrowright':
           keys.right = true;
+          event.preventDefault();
+          break;
+        case ' ': // Spacebar
+          keys.jump = true;
+          event.preventDefault();
+          jump();
           break;
         case 'p':
         case 'escape':
           togglePause();
+          event.preventDefault();
+          break;
+        case 'f':
+          toggleFullscreen();
+          event.preventDefault();
           break;
       }
     };
@@ -317,13 +293,55 @@ function createGameInstance() {
         case 'arrowright':
           keys.right = false;
           break;
+        case ' ': // Spacebar
+          keys.jump = false;
+          break;
       }
     };
     
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     
-    // Handle visibility change (pause when tab is not active)
+    // Handle fullscreen change
+    handleFullscreenChange = () => {
+      isFullscreen = !!document.fullscreenElement;
+      
+      if (isFullscreen && gameContainer) {
+        // Apply fullscreen styles to container
+        gameContainer.style.width = '100%';
+        gameContainer.style.height = '100%';
+        
+        // Apply fullscreen styles to canvas
+        if (canvas) {
+          canvas.style.width = '100%';
+          canvas.style.height = '100%';
+        }
+      } else {
+        // Reset container styles
+        if (gameContainer) {
+          gameContainer.style.width = '';
+          gameContainer.style.height = '';
+        }
+        
+        // Reset canvas styles
+        if (canvas) {
+          canvas.style.width = '';
+          canvas.style.height = '';
+        }
+      }
+      
+      // Force resize to update renderer
+      setTimeout(() => {
+        onWindowResize();
+      }, 100);
+      
+      if (callbacks.onFullscreenChange) {
+        callbacks.onFullscreenChange(isFullscreen);
+      }
+    };
+    
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && !isPaused && !showInstructions) {
         setIsPaused(true);
@@ -331,91 +349,127 @@ function createGameInstance() {
     });
   }
   
-  /**
-   * Start the game
-   */
+  function toggleFullscreen() {
+    if (!gameContainer) return;
+    
+    if (!document.fullscreenElement) {
+      // Enter fullscreen
+      if (gameContainer.requestFullscreen) {
+        gameContainer.requestFullscreen().catch(err => {
+          console.error(`Error attempting to enable fullscreen: ${err.message}`);
+        });
+      }
+    } else {
+      // Exit fullscreen
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+  }
+  
+  function jump() {
+    if (isPaused || showInstructions || gameOver) return;
+    
+    const currentTime = clock.getElapsedTime() * 1000;
+    
+    // Only allow jumping if on or near the ground and cooldown has passed
+    if (positionY < 0.1 && currentTime - lastJumpTime > jumpCooldown) {
+      velocityY = jumpForce;
+      isJumping = true;
+      lastJumpTime = currentTime;
+      
+      // Squash and stretch effect - prepare for jump
+      player.scale.y = 0.7;
+      player.scale.x = 1.2;
+      player.scale.z = 1.2;
+      
+      // After a short delay, stretch for the jump
+      setTimeout(() => {
+        if (player) {
+          player.scale.y = 1.3;
+          player.scale.x = 0.8;
+          player.scale.z = 0.8;
+        }
+      }, 100);
+    }
+  }
+  
   function start() {
     setShowInstructions(false);
     setIsPaused(false);
     setGameOver(false);
     setScore(0);
-    
-    // Clear existing game objects
     clearGameObjects();
-    
-    // Reset player position
     player.position.set(0, 0.8, 0);
     player.rotation.y = 0;
-    
-    // Reset timers
+    positionY = 0; // Reset bouncing position
+    velocityY = 0;
+    isJumping = false;
+    lastJumpTime = 0;
     lastCarrotSpawn = clock.getElapsedTime() * 1000;
     lastObstacleSpawn = clock.getElapsedTime() * 1000;
+    
+    // Focus the canvas to ensure keyboard events work
+    if (canvas) {
+      canvas.focus();
+    }
   }
   
-  /**
-   * Toggle pause state
-   */
   function togglePause() {
     if (showInstructions || gameOver) return;
     setIsPaused(!isPaused);
   }
   
-  /**
-   * Reset the game
-   */
   function reset() {
     setShowInstructions(true);
     setIsPaused(true);
     setGameOver(false);
     setScore(0);
-    
-    // Clear existing game objects
     clearGameObjects();
-    
-    // Reset player position
     player.position.set(0, 0.8, 0);
     player.rotation.y = 0;
+    positionY = 0;
+    velocityY = 0;
+    isJumping = false;
   }
   
-  /**
-   * Clear all game objects (carrots and obstacles)
-   */
   function clearGameObjects() {
-    // Remove all carrots
     for (let i = carrots.length - 1; i >= 0; i--) {
       scene.remove(carrots[i]);
     }
     carrots = [];
-    
-    // Remove all obstacles
     for (let i = obstacles.length - 1; i >= 0; i--) {
       scene.remove(obstacles[i]);
     }
     obstacles = [];
   }
   
-  /**
-   * Handle window resize
-   */
-  function onWindowResize(canvas) {
+  function onWindowResize() {
     if (!canvas || !camera || !renderer) return;
     
+    // Get the current dimensions
+    let width, height;
+    
+    if (isFullscreen) {
+      // In fullscreen, use the window dimensions
+      width = window.innerWidth;
+      height = window.innerHeight;
+    } else {
+      // Otherwise use the container dimensions
+      width = canvas.clientWidth;
+      height = canvas.clientHeight;
+    }
+    
     // Update camera aspect ratio
-    camera.aspect = canvas.clientWidth / canvas.clientHeight;
+    camera.aspect = width / height;
     camera.updateProjectionMatrix();
     
     // Update renderer size
-    renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+    renderer.setSize(width, height, false);
   }
   
-  /**
-   * Spawn a carrot at a random position
-   */
   function spawnCarrot() {
-    // Create carrot geometry
     const carrotGroup = new THREE.Group();
-    
-    // Carrot body
     const bodyGeometry = new THREE.ConeGeometry(0.2, 0.8, 8);
     const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0xFF6347 });
     const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
@@ -424,10 +478,8 @@ function createGameInstance() {
     body.castShadow = true;
     carrotGroup.add(body);
     
-    // Carrot leaves
     const leafGeometry = new THREE.ConeGeometry(0.1, 0.3, 8);
     const leafMaterial = new THREE.MeshStandardMaterial({ color: 0x228B22 });
-    
     for (let i = 0; i < 3; i++) {
       const leaf = new THREE.Mesh(leafGeometry, leafMaterial);
       leaf.position.set(
@@ -441,199 +493,195 @@ function createGameInstance() {
       carrotGroup.add(leaf);
     }
     
-    // Position carrot randomly on the ground
     const x = (Math.random() - 0.5) * 20;
     const z = (Math.random() - 0.5) * 20;
     carrotGroup.position.set(x, 0, z);
-    
-    // Add to scene and carrots array
     scene.add(carrotGroup);
     carrots.push(carrotGroup);
-    
-    // Update last spawn time
     lastCarrotSpawn = clock.getElapsedTime() * 1000;
   }
   
-  /**
-   * Spawn an obstacle at a random position
-   */
   function spawnObstacle() {
-    // Create obstacle geometry (rock)
     const obstacleGeometry = new THREE.DodecahedronGeometry(0.8, 0);
     const obstacleMaterial = new THREE.MeshStandardMaterial({ 
       color: 0x808080,
       roughness: 0.9,
     });
     const obstacle = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
-    
-    // Position obstacle randomly on the ground
     const x = (Math.random() - 0.5) * 20;
     const z = (Math.random() - 0.5) * 20;
     obstacle.position.set(x, 0.8, z);
-    
-    // Random rotation for variety
     obstacle.rotation.y = Math.random() * Math.PI * 2;
-    
-    // Add to scene and obstacles array
     obstacle.castShadow = true;
     scene.add(obstacle);
     obstacles.push(obstacle);
-    
-    // Update last spawn time
     lastObstacleSpawn = clock.getElapsedTime() * 1000;
   }
   
-  /**
-   * Update player position based on input
-   */
   function updatePlayer(deltaTime) {
     if (isPaused || showInstructions || gameOver) return;
     
-    // Calculate movement direction
     const moveX = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
     const moveZ = (keys.backward ? 1 : 0) - (keys.forward ? 1 : 0);
     
-    if (moveX !== 0 || moveZ !== 0) {
-      // Calculate movement angle
+    isMoving = (moveX !== 0 || moveZ !== 0);
+    
+    if (isMoving) {
       const angle = Math.atan2(moveX, moveZ);
-      
-      // Rotate player to face movement direction
       player.rotation.y = angle;
-      
-      // Move player
       const speed = playerSpeed * deltaTime;
       player.position.x += Math.sin(angle) * speed;
       player.position.z += Math.cos(angle) * speed;
-      
-      // Keep player within bounds
       const boundaryLimit = 24;
       player.position.x = Math.max(-boundaryLimit, Math.min(boundaryLimit, player.position.x));
       player.position.z = Math.max(-boundaryLimit, Math.min(boundaryLimit, player.position.z));
     }
   }
   
-  /**
-   * Check for collisions between player and game objects
-   */
+  function updateBounce(deltaTime) {
+    if (isPaused || showInstructions || gameOver) return;
+    
+    // Apply gravity
+    velocityY += gravity * deltaTime * 0.06;
+    positionY += velocityY;
+    
+    // Handle ground collision
+    if (positionY < 0) {
+      positionY = 0;
+      
+      // Only bounce if we're moving and not in a deliberate jump
+      if (isMoving && !isJumping) {
+        velocityY = -velocityY * bounceFactor;
+        // Squash effect on landing
+        player.scale.y = 0.8;
+        player.scale.x = 1.1;
+        player.scale.z = 1.1;
+      } else {
+        velocityY = 0;
+        isJumping = false;
+        // Reset scale gradually
+        player.scale.y += (1 - player.scale.y) * 0.2;
+        player.scale.x += (1 - player.scale.x) * 0.2;
+        player.scale.z += (1 - player.scale.z) * 0.2;
+      }
+    } else {
+      // In air, gradually return to normal scale
+      player.scale.y += (1 - player.scale.y) * 0.1;
+      player.scale.x += (1 - player.scale.x) * 0.1;
+      player.scale.z += (1 - player.scale.z) * 0.1;
+    }
+    
+    // Update player position
+    player.position.y = 0.8 + positionY;
+  }
+  
   function checkCollisions() {
     if (isPaused || showInstructions || gameOver) return;
     
     const playerPos = new THREE.Vector3().copy(player.position);
-    const playerRadius = 0.8; // Approximate collision radius
+    const playerRadius = 0.8;
     
-    // Check carrot collisions
     for (let i = carrots.length - 1; i >= 0; i--) {
       const carrot = carrots[i];
       const carrotPos = new THREE.Vector3().copy(carrot.position);
-      
-      // Calculate distance (ignoring y-axis)
       carrotPos.y = playerPos.y;
       const distance = playerPos.distanceTo(carrotPos);
-      
-      // If collision detected
       if (distance < playerRadius + 0.4) {
-        // Remove carrot
         scene.remove(carrot);
         carrots.splice(i, 1);
-        
-        // Increase score
         setScore(score + 10);
       }
     }
     
-    // Check obstacle collisions
     for (let i = 0; i < obstacles.length; i++) {
       const obstacle = obstacles[i];
       const obstaclePos = new THREE.Vector3().copy(obstacle.position);
-      
-      // Calculate distance (ignoring y-axis)
       obstaclePos.y = playerPos.y;
       const distance = playerPos.distanceTo(obstaclePos);
-      
-      // If collision detected
       if (distance < playerRadius + 0.8) {
-        // Game over
         setGameOver(true);
         setIsPaused(true);
-        
-        // Show game over message
         setTimeout(() => {
           setShowInstructions(true);
         }, 1500);
-        
         break;
       }
     }
   }
   
-  /**
-   * Main animation loop
-   */
   function animate() {
-    // Request next frame
     animationFrameId = requestAnimationFrame(animate);
     
-    // Skip rendering if elements aren't ready
     if (!scene || !camera || !renderer || !clock) return;
     
     try {
-      // Get delta time
-      const deltaTime = clock.getDelta() * 1000; // ms
+      const deltaTime = clock.getDelta() * 1000;
       
-      // Update game logic if not paused
       if (!isPaused && !showInstructions) {
-        // Spawn carrots
         const currentTime = clock.getElapsedTime() * 1000;
         if (currentTime - lastCarrotSpawn > carrotSpawnRate) {
           spawnCarrot();
         }
-        
-        // Spawn obstacles
         if (currentTime - lastObstacleSpawn > obstacleSpawnRate) {
           spawnObstacle();
         }
-        
-        // Update player position
         updatePlayer(deltaTime);
-        
-        // Check collisions
+        updateBounce(deltaTime);
         checkCollisions();
+      } else {
+        updateBounce(deltaTime); // Keep bounce settling when paused
       }
       
-      // Update camera to follow player
       if (!showInstructions && player) {
         camera.position.x = player.position.x;
         camera.position.z = player.position.z + 10;
         camera.lookAt(player.position);
       }
       
-      // Render scene
       renderer.render(scene, camera);
     } catch (error) {
       console.error('Error in animation loop:', error);
     }
   }
   
-  /**
-   * Clean up resources when component is destroyed
-   */
   function destroy() {
-    // Cancel animation frame
     if (animationFrameId) {
       cancelAnimationFrame(animationFrameId);
     }
     
-    // Remove event listeners
+    // Remove all event listeners
     window.removeEventListener('resize', handleResize);
     window.removeEventListener('keydown', handleKeyDown);
     window.removeEventListener('keyup', handleKeyUp);
+    document.removeEventListener('fullscreenchange', handleFullscreenChange);
     
-    // Dispose of Three.js resources
+    // Remove the spacebar scroll prevention
+    window.removeEventListener('keydown', (e) => {
+      if (e.key === ' ') e.preventDefault();
+    });
+    
+    // Exit fullscreen if active
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(err => {
+        console.error(`Error exiting fullscreen: ${err.message}`);
+      });
+    }
+    
+    // Reset styles
+    if (gameContainer) {
+      gameContainer.style.width = '';
+      gameContainer.style.height = '';
+    }
+    
+    if (canvas) {
+      canvas.style.width = '';
+      canvas.style.height = '';
+    }
+    
     if (renderer) {
       renderer.dispose();
     }
     
-    // Clear references
     scene = null;
     camera = null;
     renderer = null;
@@ -642,9 +690,10 @@ function createGameInstance() {
     carrots = [];
     obstacles = [];
     ground = null;
+    canvas = null;
+    gameContainer = null;
   }
   
-  // State update helpers with callbacks
   function setScore(newScore) {
     score = newScore;
     if (callbacks.onScoreChange) {
@@ -673,12 +722,12 @@ function createGameInstance() {
     }
   }
   
-  // Return public API
   return {
     init,
     start,
     togglePause,
     reset,
+    toggleFullscreen,
     destroy
   };
-} 
+}

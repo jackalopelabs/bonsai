@@ -18,6 +18,8 @@
                 <h3 class="text-xl font-semibold mb-4">How to Play</h3>
                 <ul class="list-disc pl-5 space-y-2">
                     <li>Use <strong>arrow keys</strong> or <strong>WASD</strong> to move the jackalope</li>
+                    <li>Press <strong>spacebar</strong> to jump over obstacles</li>
+                    <li>Press <strong>F</strong> or click the fullscreen button for a better experience</li>
                     <li>Collect orange carrots to earn points</li>
                     <li>Avoid gray rocks - hitting them ends the game</li>
                     <li>Press <strong>ESC</strong> or <strong>P</strong> to pause the game</li>

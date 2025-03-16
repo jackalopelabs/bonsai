@@ -2,10 +2,30 @@
     'class' => '',
 ])
 
+<style>
+    /* Fullscreen styles */
+    .jackalope-game-container:fullscreen {
+        width: 100vw !important;
+        height: 100vh !important;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .jackalope-game-container:fullscreen canvas {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: contain;
+    }
+</style>
+
 <div {{ $attributes->merge(['class' => 'jackalope-game-container relative w-full h-[500px] rounded-lg overflow-hidden shadow-lg ' . $class]) }}
      x-data="jackalope3DGame"
      x-init="initGame"
-     x-on:beforeunload.window="destroy">
+     x-on:beforeunload.window="destroy"
+     tabindex="0">
     <canvas x-ref="gameCanvas" class="w-full h-full"></canvas>
     
     <div class="absolute bottom-4 left-4 right-4 flex justify-between">
@@ -13,6 +33,10 @@
             <span x-text="score">0</span> points
         </div>
         <div class="flex gap-2">
+            <button @click="toggleFullscreen" 
+                    class="bg-black/50 text-white px-3 py-1 rounded-md hover:bg-black/70 transition-colors">
+                <span x-text="isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'">Fullscreen</span>
+            </button>
             <button @click="togglePause" 
                     class="bg-black/50 text-white px-3 py-1 rounded-md hover:bg-black/70 transition-colors">
                 <span x-text="isPaused ? 'Resume' : 'Pause'">Pause</span>
@@ -30,7 +54,9 @@
         <h3 class="text-2xl font-bold mb-4">Jackalope Game</h3>
         <p class="mb-6">Help the jackalope collect carrots while avoiding obstacles!</p>
         <ul class="mb-6 text-left">
-            <li class="mb-2">• Use arrow keys or WASD to move</li>
+            <li class="mb-2">• Use <strong>arrow keys</strong> or <strong>WASD</strong> to move</li>
+            <li class="mb-2">• Press <strong>spacebar</strong> to jump</li>
+            <li class="mb-2">• Press <strong>F</strong> to toggle fullscreen</li>
             <li class="mb-2">• Collect carrots for points</li>
             <li class="mb-2">• Avoid obstacles</li>
         </ul>
