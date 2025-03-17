@@ -87,7 +87,7 @@ export default function tinyPlanetsGame() {
       this.createStars(scene);
       
       // Create procedural planet
-      this.createProceduralPlanet(scene);
+      this.createProceduralPlanet();
       
       // Add orbit controls for easy navigation
       controls = new OrbitControls(camera, canvas);
@@ -114,8 +114,8 @@ export default function tinyPlanetsGame() {
         
         if (!this.isPaused) {
           // Rotate the planet slowly
-          if (this.planet) {
-            this.planet.rotation.y += 0.001;
+          if (this.planetGroup) {
+            this.planetGroup.rotation.y += 0.001;
           }
           
           // Animate water level
@@ -146,6 +146,7 @@ export default function tinyPlanetsGame() {
           // Animate clouds
           if (this.clouds) {
             this.clouds.rotation.y += 0.0005; // Rotate clouds slightly faster than planet
+            this.clouds.rotation.x += 0.0001; // Add slight tilt to cloud rotation
             
             // Pulse cloud opacity slightly
             this.clouds.material.opacity = 0.7 + Math.sin(this.waterTime * 1.5) * 0.1;
@@ -160,9 +161,9 @@ export default function tinyPlanetsGame() {
             // Vary atmosphere opacity
             this.atmosphere.material.opacity = 0.1 + Math.sin(this.waterTime * 0.7) * 0.05;
           }
-          
-          // Update controls
-          controls.update();
+        
+        // Update controls
+        controls.update();
         }
         
         // Render scene
@@ -202,258 +203,236 @@ export default function tinyPlanetsGame() {
       scene.add(starfield);
     },
     
-    createProceduralPlanet(scene) {
-      // Create a planet group to hold all components
+    createProceduralPlanet() {
+      // Create a group to hold the planet and its features
       const planetGroup = new THREE.Group();
+      scene.add(planetGroup);
       
-      // Create the land mass (higher detail terrain)
+      // Create the planet geometry
       const radius = 4;
-      const detail = 3; // Increased from 2 for higher fidelity
-      
-      // Create base geometry
+      const detail = 3;
       const geometry = new THREE.IcosahedronGeometry(radius, detail);
       
       // Create noise for terrain generation
       const noise = new SimplexNoise();
+      const biomeNoise = new SimplexNoise();
       
-      // Get vertices and modify them with noise
-      const vertices = geometry.attributes.position;
-      const vertexCount = vertices.count;
-      
-      // Arrays to store terrain data for coloring
-      const terrainHeight = [];
-      const maxHeight = radius * 0.25; // Increased height variation
-      
-      // Store positions for nature assets
+      // Arrays to store positions for trees, rocks, and grass
       const treePositions = [];
       const rockPositions = [];
       const grassPositions = [];
+      const specialFeaturePositions = [];
+      const biomeTypes = [];
       
-      // Apply noise to vertices
+      // Deform the geometry based on noise
+      const positions = geometry.attributes.position;
+      const vertexCount = positions.count;
+      
       for (let i = 0; i < vertexCount; i++) {
-        const x = vertices.getX(i);
-        const y = vertices.getY(i);
-        const z = vertices.getZ(i);
+        const x = positions.getX(i);
+        const y = positions.getY(i);
+        const z = positions.getZ(i);
         
-        // Normalize the position to get direction from center
-        const nx = x / radius;
-        const ny = y / radius;
-        const nz = z / radius;
+        // Get the normalized position (direction from center)
+        const normPos = new THREE.Vector3(x, y, z).normalize();
         
-        // Apply multiple layers of noise for more interesting terrain
-        let elevation = 0;
-        // More octaves of noise for more detailed terrain
-        elevation += noise.noise3d(nx * 1.5, ny * 1.5, nz * 1.5) * 0.5;
-        elevation += noise.noise3d(nx * 3, ny * 3, nz * 3) * 0.25;
-        elevation += noise.noise3d(nx * 6, ny * 6, nz * 6) * 0.125;
-        elevation += noise.noise3d(nx * 12, ny * 12, nz * 12) * 0.0625;
+        // Generate biome type based on position
+        const biomeValue = biomeNoise.noise3d(normPos.x * 1.5, normPos.y * 1.5, normPos.z * 1.5);
         
-        // Scale the elevation
-        const displacement = elevation * maxHeight;
-        
-        // Store the height for coloring
-        terrainHeight[i] = elevation;
-        
-        // Apply the displacement in the direction of the normal
-        vertices.setX(i, x * (1 + displacement / radius));
-        vertices.setY(i, y * (1 + displacement / radius));
-        vertices.setZ(i, z * (1 + displacement / radius));
-      }
-      
-      // Update normals
-      geometry.computeVertexNormals();
-      
-      // Create color array for terrain
-      const colors = new Float32Array(vertexCount * 3);
-      
-      // Define terrain colors with more variety
-      const deepWater = new THREE.Color(0x0055aa);
-      const shallowWater = new THREE.Color(0x00a9cc);
-      const sand = new THREE.Color(0xdbc380);
-      const grass = new THREE.Color(0x7caa2d);
-      const forest = new THREE.Color(0x2d6a1e); // Added forest color
-      const rock = new THREE.Color(0x8c8c8c);
-      const darkRock = new THREE.Color(0x555555); // Added dark rock color
-      const snow = new THREE.Color(0xffffff);
-      
-      // Water level threshold
-      const waterLevel = -0.1;
-      
-      // Apply colors based on height with smoother transitions
-      for (let i = 0; i < vertexCount; i++) {
-        const height = terrainHeight[i];
-        let color = new THREE.Color();
-        
-        if (height < waterLevel - 0.08) {
-          // Deep water
-          color.copy(deepWater);
-        } else if (height < waterLevel - 0.02) {
-          // Transition from deep to shallow water
-          const t = (height - (waterLevel - 0.08)) / 0.06;
-          color.lerpColors(deepWater, shallowWater, t);
-        } else if (height < waterLevel) {
-          // Shallow water
-          color.copy(shallowWater);
-        } else if (height < waterLevel + 0.03) {
-          // Sand/beach
-          color.copy(sand);
-          
-          // Add some grass clumps on beaches
-          if (Math.random() < 0.05) {
-            const pos = new THREE.Vector3(
-              vertices.getX(i),
-              vertices.getY(i),
-              vertices.getZ(i)
-            );
-            grassPositions.push({
-              position: pos,
-              scale: 0.02 + Math.random() * 0.02,
-              type: 'beach'
-            });
-          }
-        } else if (height < waterLevel + 0.1) {
-          // Transition from sand to grass
-          const t = (height - (waterLevel + 0.03)) / 0.07;
-          color.lerpColors(sand, grass, t);
-          
-          // Add some grass clumps in transition zone
-          if (Math.random() < 0.07) {
-            const pos = new THREE.Vector3(
-              vertices.getX(i),
-              vertices.getY(i),
-              vertices.getZ(i)
-            );
-            grassPositions.push({
-              position: pos,
-              scale: 0.02 + Math.random() * 0.02,
-              type: Math.random() > 0.5 ? 'beach' : 'plains'
-            });
-          }
-        } else if (height < 0.15) {
-          // Grass/plains
-          color.copy(grass);
-          
-          // Add grass clumps in plains
-          if (Math.random() < 0.1) {
-            const pos = new THREE.Vector3(
-              vertices.getX(i),
-              vertices.getY(i),
-              vertices.getZ(i)
-            );
-            grassPositions.push({
-              position: pos,
-              scale: 0.03 + Math.random() * 0.03,
-              type: 'plains'
-            });
-          }
-        } else if (height < 0.2) {
-          // Transition from grass to forest
-          const t = (height - 0.15) / 0.05;
-          color.lerpColors(grass, forest, t);
-          
-          // Add small trees in transition zone
-          if (Math.random() < 0.15) {
-            const pos = new THREE.Vector3(
-              vertices.getX(i),
-              vertices.getY(i),
-              vertices.getZ(i)
-            );
-            treePositions.push({
-              position: pos,
-              scale: 0.05 + Math.random() * 0.05,
-              type: 'small'
-            });
-          }
-        } else if (height < 0.3) {
-          // Forest
-          color.copy(forest);
-          
-          // Add trees in forest
-          if (Math.random() < 0.2) {
-            const pos = new THREE.Vector3(
-              vertices.getX(i),
-              vertices.getY(i),
-              vertices.getZ(i)
-            );
-            treePositions.push({
-              position: pos,
-              scale: 0.08 + Math.random() * 0.07,
-              type: 'normal'
-            });
-          }
-        } else if (height < 0.35) {
-          // Transition from forest to rock
-          const t = (height - 0.3) / 0.05;
-          color.lerpColors(forest, rock, t);
-          
-          // Add small rocks and sparse trees
-          if (Math.random() < 0.1) {
-            const pos = new THREE.Vector3(
-              vertices.getX(i),
-              vertices.getY(i),
-              vertices.getZ(i)
-            );
-            if (Math.random() < 0.3) {
-              treePositions.push({
-                position: pos,
-                scale: 0.06 + Math.random() * 0.04,
-                type: 'pine'
-              });
-            } else {
-              rockPositions.push({
-                position: pos,
-                scale: 0.05 + Math.random() * 0.05,
-                type: 'small'
-              });
-            }
-          }
-        } else if (height < 0.45) {
-          // Rock/mountains
-          color.copy(rock);
-          
-          // Add rocks in mountains
-          if (Math.random() < 0.15) {
-            const pos = new THREE.Vector3(
-              vertices.getX(i),
-              vertices.getY(i),
-              vertices.getZ(i)
-            );
-            rockPositions.push({
-              position: pos,
-              scale: 0.07 + Math.random() * 0.08,
-              type: 'medium'
-            });
-          }
-        } else if (height < 0.5) {
-          // Transition from rock to dark rock
-          const t = (height - 0.45) / 0.05;
-          color.lerpColors(rock, darkRock, t);
-          
-          // Add large rocks
-          if (Math.random() < 0.1) {
-            const pos = new THREE.Vector3(
-              vertices.getX(i),
-              vertices.getY(i),
-              vertices.getZ(i)
-            );
-            rockPositions.push({
-              position: pos,
-              scale: 0.1 + Math.random() * 0.1,
-              type: 'large'
-            });
-          }
-        } else if (height < 0.55) {
-          // Dark rock
-          color.copy(darkRock);
-        } else if (height < 0.6) {
-          // Transition from dark rock to snow
-          const t = (height - 0.55) / 0.05;
-          color.lerpColors(darkRock, snow, t);
+        // Determine biome type
+        let biomeType;
+        if (biomeValue < -0.6) {
+          biomeType = 'ocean';
+        } else if (biomeValue < -0.3) {
+          biomeType = 'beach';
+        } else if (biomeValue < 0) {
+          biomeType = 'plains';
+        } else if (biomeValue < 0.3) {
+          biomeType = 'forest';
+        } else if (biomeValue < 0.5) {
+          biomeType = 'jungle';
+        } else if (biomeValue < 0.7) {
+          biomeType = 'savanna';
+        } else if (biomeValue < 0.85) {
+          biomeType = 'desert';
         } else {
-          // Snow caps
-          color.copy(snow);
+          biomeType = 'mesa';
         }
         
+        biomeTypes[i] = biomeType;
+        
+        // Generate elevation based on noise and biome
+        let elevation = noise.noise3d(normPos.x * 2, normPos.y * 2, normPos.z * 2);
+        
+        // Modify elevation based on biome
+        switch(biomeType) {
+          case 'ocean':
+            elevation = elevation * 0.2 - 0.2; // Deeper ocean
+            break;
+          case 'beach':
+            elevation = elevation * 0.1 - 0.05; // Flatter beaches
+            break;
+          case 'plains':
+            elevation = elevation * 0.3; // Gentle plains
+            break;
+          case 'forest':
+            elevation = elevation * 0.5; // Rolling forest
+            break;
+          case 'jungle':
+            elevation = elevation * 0.7; // Varied jungle
+            break;
+          case 'savanna':
+            elevation = elevation * 0.4; // Mostly flat with some hills
+            break;
+          case 'desert':
+            // Add dunes to desert
+            const duneNoise = noise.noise3d(normPos.x * 8, normPos.y * 8, normPos.z * 8) * 0.2;
+            elevation = elevation * 0.3 + duneNoise;
+            break;
+          case 'mesa':
+            // Create mesa formations
+            const mesaNoise = noise.noise3d(normPos.x * 4, normPos.y * 4, normPos.z * 4);
+            if (mesaNoise > 0.2) {
+              elevation = 0.5 + mesaNoise * 0.5; // Mesa plateaus
+            } else {
+              elevation = elevation * 0.3; // Lower areas
+            }
+            break;
+        }
+        
+        // Apply elevation to vertex
+        const newPos = normPos.multiplyScalar(radius * (1 + elevation * 0.2));
+        positions.setXYZ(i, newPos.x, newPos.y, newPos.z);
+        
+        // Randomly place trees, rocks, and grass based on biome and elevation
+        if (Math.random() > 0.995) {
+          // Determine what to place based on biome
+          switch(biomeType) {
+            case 'forest':
+              if (elevation > 0) {
+                treePositions.push({
+                  position: newPos.clone(),
+                  type: Math.random() > 0.7 ? 'pine' : 'normal',
+                  scale: 0.25 + Math.random() * 0.15
+                });
+              }
+              break;
+            case 'jungle':
+              if (elevation > 0) {
+                treePositions.push({
+                  position: newPos.clone(),
+                  type: 'jungle',
+                  scale: 0.25 + Math.random() * 0.15
+                });
+              }
+              break;
+            case 'savanna':
+              if (elevation > 0 && Math.random() > 0.7) {
+                treePositions.push({
+                  position: newPos.clone(),
+                  type: 'savanna',
+                  scale: 0.25 + Math.random() * 0.15
+                });
+              }
+              break;
+            case 'desert':
+              if (elevation > 0 && Math.random() > 0.7) {
+                specialFeaturePositions.push({
+                  position: newPos.clone(),
+                  type: 'cactus',
+                  scale: 0.15 + Math.random() * 0.1
+                });
+              }
+              break;
+          }
+        }
+        
+        // Place rocks
+        if (Math.random() > 0.997) {
+          let rockType;
+          
+          switch(biomeType) {
+            case 'desert':
+              rockType = 'desert';
+              break;
+            case 'mesa':
+              rockType = 'mesa';
+              break;
+            default:
+              rockType = ['small', 'medium', 'large'][Math.floor(Math.random() * 3)];
+              break;
+          }
+          
+          rockPositions.push({
+            position: newPos.clone(),
+            type: rockType,
+            scale: 0.12 + Math.random() * 0.1
+          });
+        }
+        
+        // Place grass in appropriate biomes
+        if (Math.random() > 0.99 && (biomeType === 'plains' || biomeType === 'forest' || biomeType === 'savanna')) {
+          grassPositions.push({
+            position: newPos.clone(),
+            type: biomeType === 'savanna' ? 'tall' : 'normal',
+            scale: 0.08 + Math.random() * 0.07
+          });
+        }
+      }
+      
+      // Update normals after deformation
+      geometry.computeVertexNormals();
+      
+      // Create color array for vertices
+      const colors = new Float32Array(vertexCount * 3);
+      
+      // Apply colors based on elevation and biome
+      for (let i = 0; i < vertexCount; i++) {
+        const x = positions.getX(i);
+        const y = positions.getY(i);
+        const z = positions.getZ(i);
+        
+        // Calculate elevation as distance from center
+        const elevation = new THREE.Vector3(x, y, z).length() - radius;
+        const normalizedElevation = elevation / (radius * 0.2);
+        
+        // Get biome type for this vertex
+        const biomeType = biomeTypes[i];
+        
+        // Set color based on biome and elevation
+        let color = new THREE.Color();
+        
+        switch(biomeType) {
+          case 'ocean':
+            color.setRGB(0.1, 0.3, 0.6);
+            break;
+          case 'beach':
+            color.setRGB(0.95, 0.9, 0.7);
+            break;
+          case 'plains':
+            color.setRGB(0.4, 0.7, 0.3);
+            break;
+          case 'forest':
+            color.setRGB(0.3, 0.5, 0.25);
+            break;
+          case 'jungle':
+            color.setRGB(0.2, 0.6, 0.3);
+            break;
+          case 'savanna':
+            color.setRGB(0.8, 0.7, 0.4);
+            break;
+          case 'desert':
+            color.setRGB(0.9, 0.8, 0.5);
+            break;
+          case 'mesa':
+            color.setRGB(0.8, 0.5, 0.3);
+            break;
+          default:
+            // Fallback color
+            color.setRGB(0.5, 0.5, 0.5);
+        }
+        
+        // Apply color to vertex
         colors[i * 3] = color.r;
         colors[i * 3 + 1] = color.g;
         colors[i * 3 + 2] = color.b;
@@ -465,170 +444,705 @@ export default function tinyPlanetsGame() {
       // Create material with vertex colors
       const material = new THREE.MeshStandardMaterial({
         vertexColors: true,
-        flatShading: true, // Important for low-poly look
+        flatShading: true,
         roughness: 0.8,
         metalness: 0.1
       });
       
-      // Create the terrain mesh
-      const terrain = new THREE.Mesh(geometry, material);
-      terrain.castShadow = true;
-      terrain.receiveShadow = true;
-      planetGroup.add(terrain);
+      // Create mesh and add to scene
+      const planetMesh = new THREE.Mesh(geometry, material);
+      planetMesh.castShadow = true;
+      planetMesh.receiveShadow = true;
+      planetGroup.add(planetMesh);
       
-      // Add nature assets
-      this.addNatureAssets(planetGroup, treePositions, rockPositions, grassPositions);
+      // Create water
+      this.createWater(planetGroup, radius);
       
-      // Create higher detail water sphere
-      const waterGeometry = new THREE.IcosahedronGeometry(radius * 0.99, 3); // Increased detail level
-      const waterMaterial = new THREE.MeshPhysicalMaterial({
-        color: 0x0077be,
-        roughness: 0.1,
-        metalness: 0.1,
-        transmission: 0.9,
-        transparent: true,
-        opacity: 0.7,
-        clearcoat: 1.0,
-        clearcoatRoughness: 0.2,
-        envMapIntensity: 1.5,
-        ior: 1.4, // Water has an IOR of ~1.33
-        reflectivity: 0.7,
-        iridescence: 0.3,
-        iridescenceIOR: 1.5
-      });
+      // Create clouds
+      this.createClouds(planetGroup, radius * 1.1);
       
-      const water = new THREE.Mesh(waterGeometry, waterMaterial);
+      // Create trees
+      this.createTrees(planetGroup, treePositions);
       
-      // Only show water where terrain is below water level
-      const waterVertices = waterGeometry.attributes.position;
-      const waterVertexCount = waterVertices.count;
+      // Create rocks
+      this.createRocks(planetGroup, rockPositions);
       
-      // Create a visibility array for water vertices
-      const waterVisibility = new Float32Array(waterVertexCount);
+      // Create grass
+      this.createGrass(planetGroup, grassPositions);
       
-      for (let i = 0; i < waterVertexCount; i++) {
-        const x = waterVertices.getX(i);
-        const y = waterVertices.getY(i);
-        const z = waterVertices.getZ(i);
-        
-        // Normalize the position
-        const nx = x / radius;
-        const ny = y / radius;
-        const nz = z / radius;
-        
-        // Calculate height at this point
-        let elevation = 0;
-        elevation += noise.noise3d(nx * 1.5, ny * 1.5, nz * 1.5) * 0.5;
-        elevation += noise.noise3d(nx * 3, ny * 3, nz * 3) * 0.25;
-        elevation += noise.noise3d(nx * 6, ny * 6, nz * 6) * 0.125;
-        elevation += noise.noise3d(nx * 12, ny * 12, nz * 12) * 0.0625;
-        
-        // If terrain is above water level, hide water at this point
-        if (elevation > waterLevel) {
-          // Move water vertex inward to hide it
-          waterVertices.setX(i, x * 0.95);
-          waterVertices.setY(i, y * 0.95);
-          waterVertices.setZ(i, z * 0.95);
-        }
-      }
+      // Create special features (cacti, etc.)
+      this.createSpecialFeatures(planetGroup, specialFeaturePositions);
       
-      water.castShadow = false;
-      water.receiveShadow = true;
-      planetGroup.add(water);
+      // Store reference to planet group
+      this.planetGroup = planetGroup;
       
-      // Store water reference for animation
-      this.water = water;
-      this.waterBaseRadius = radius * 0.99;
-      this.waterLevel = waterLevel;
-      this.waterTime = 0;
-      
-      // Add atmosphere glow
-      const atmosphereGeometry = new THREE.SphereGeometry(radius * 1.1, 32, 32);
-      const atmosphereMaterial = new THREE.MeshBasicMaterial({
-        color: 0x88aaff,
-        transparent: true,
-        opacity: 0.1,
-        side: THREE.BackSide
-      });
-      
-      const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
-      planetGroup.add(atmosphere);
-      this.atmosphere = atmosphere; // Store for animation
-      
-      // Add clouds
-      this.createClouds(planetGroup, radius * 1.05);
-      
-      // Add the planet to the scene
-      scene.add(planetGroup);
-      
-      // Store reference to the planet
-      this.planet = planetGroup;
+      return planetGroup;
     },
     
-    createClouds(planetGroup, radius) {
-      // Create cloud particles
-      const cloudCount = 200;
-      const cloudGeometry = new THREE.BufferGeometry();
-      const cloudPositions = new Float32Array(cloudCount * 3);
-      const cloudSizes = new Float32Array(cloudCount);
-      
-      // Create noise for cloud distribution
-      const noise = new SimplexNoise();
-      
-      // Generate cloud positions on the sphere
-      for (let i = 0; i < cloudCount; i++) {
-        // Generate random point on sphere
-        const phi = Math.acos(-1 + (2 * i) / cloudCount);
-        const theta = Math.sqrt(cloudCount * Math.PI) * phi;
-        
-        // Convert to Cartesian coordinates
-        let x = radius * Math.sin(phi) * Math.cos(theta);
-        let y = radius * Math.sin(phi) * Math.sin(theta);
-        let z = radius * Math.cos(phi);
-        
-        // Add some noise to the positions
-        const nx = x / radius;
-        const ny = y / radius;
-        const nz = z / radius;
-        
-        // Only place clouds where noise is positive (creates cloud clusters)
-        const cloudNoise = noise.noise3d(nx * 2, ny * 2, nz * 2);
-        
-        if (cloudNoise > 0.1) {
-          cloudPositions[i * 3] = x;
-          cloudPositions[i * 3 + 1] = y;
-          cloudPositions[i * 3 + 2] = z;
-          
-          // Vary cloud size based on noise
-          cloudSizes[i] = 0.2 + cloudNoise * 0.3;
-        } else {
-          // Place cloud below planet (will not be visible)
-          cloudPositions[i * 3] = 0;
-          cloudPositions[i * 3 + 1] = -radius * 2;
-          cloudPositions[i * 3 + 2] = 0;
-          cloudSizes[i] = 0;
-        }
+    createTrees(planetGroup, treePositions) {
+      // Limit the number of trees for performance
+      const maxTrees = 100;
+      if (treePositions.length > maxTrees) {
+        treePositions = treePositions.sort(() => 0.5 - Math.random()).slice(0, maxTrees);
       }
       
-      cloudGeometry.setAttribute('position', new THREE.BufferAttribute(cloudPositions, 3));
-      cloudGeometry.setAttribute('size', new THREE.BufferAttribute(cloudSizes, 1));
+      // Create tree geometries
+      const normalTreeGeometry = this.createNormalTreeGeometry();
+      const pineTreeGeometry = this.createPineTreeGeometry();
+      const smallTreeGeometry = this.createSmallTreeGeometry();
+      const jungleTreeGeometry = this.createJungleTreeGeometry();
+      const savannaTreeGeometry = this.createSavannaTreeGeometry();
       
-      // Create cloud material
-      const cloudMaterial = new THREE.PointsMaterial({
-        color: 0xffffff,
-        size: 0.3,
-        transparent: true,
-        opacity: 0.7,
-        sizeAttenuation: true,
-        depthWrite: false
+      // Create tree materials
+      const trunkMaterial = new THREE.MeshStandardMaterial({
+        color: 0x8B4513,
+        flatShading: true,
+        roughness: 0.9,
+        metalness: 0.0
       });
       
-      // Create cloud system
-      const clouds = new THREE.Points(cloudGeometry, cloudMaterial);
-      planetGroup.add(clouds);
+      const lightTrunkMaterial = new THREE.MeshStandardMaterial({
+        color: 0xAA8866,
+        flatShading: true,
+        roughness: 0.9,
+        metalness: 0.0
+      });
       
-      // Store reference for animation
-      this.clouds = clouds;
+      const leafMaterial = new THREE.MeshStandardMaterial({
+        color: 0x2d6a1e,
+        flatShading: true,
+        roughness: 0.8,
+        metalness: 0.0
+      });
+      
+      const darkLeafMaterial = new THREE.MeshStandardMaterial({
+        color: 0x1a4313,
+        flatShading: true,
+        roughness: 0.8,
+        metalness: 0.0
+      });
+      
+      const jungleLeafMaterial = new THREE.MeshStandardMaterial({
+        color: 0x1e5c10,
+        flatShading: true,
+        roughness: 0.7,
+        metalness: 0.0
+      });
+      
+      const savannaLeafMaterial = new THREE.MeshStandardMaterial({
+        color: 0xbfb05b,
+        flatShading: true,
+        roughness: 0.9,
+        metalness: 0.0
+      });
+      
+      // Create tree instances
+      treePositions.forEach(treeData => {
+        let treeMesh;
+        
+        switch(treeData.type) {
+          case 'normal':
+            treeMesh = this.createTreeInstance(normalTreeGeometry, trunkMaterial, leafMaterial);
+            break;
+          case 'pine':
+            treeMesh = this.createTreeInstance(pineTreeGeometry, trunkMaterial, darkLeafMaterial);
+            break;
+          case 'jungle':
+            treeMesh = this.createTreeInstance(jungleTreeGeometry, trunkMaterial, jungleLeafMaterial);
+            break;
+          case 'savanna':
+            treeMesh = this.createTreeInstance(savannaTreeGeometry, lightTrunkMaterial, savannaLeafMaterial);
+            break;
+          case 'small':
+          default:
+            treeMesh = this.createTreeInstance(smallTreeGeometry, trunkMaterial, leafMaterial);
+            break;
+        }
+        
+        // Get the original position from the terrain
+        const originalPos = treeData.position.clone();
+        
+        // Get the normalized direction from center to position
+        const direction = originalPos.clone().normalize();
+        
+        // Calculate the planet radius (4 is the base radius used in createProceduralPlanet)
+        const planetRadius = 4;
+        
+        // Position the tree on the surface with a slight offset to ensure it's visible
+        // Use the actual terrain position rather than recalculating it
+        const surfaceOffset = 0.05; // Small offset to prevent z-fighting
+        const treePos = originalPos.clone().add(direction.multiplyScalar(surfaceOffset));
+        treeMesh.position.copy(treePos);
+        
+        // Create a quaternion that rotates from the up vector (0,1,0) to the direction from center to tree
+        const upVector = new THREE.Vector3(0, 1, 0);
+        const normalVector = direction.clone();
+        
+        // Create a quaternion to rotate from up vector to normal vector
+        const quaternion = new THREE.Quaternion().setFromUnitVectors(upVector, normalVector);
+        treeMesh.setRotationFromQuaternion(quaternion);
+        
+        // Add random rotation around the normal axis
+        const rotationAxis = normalVector.clone();
+        const angle = Math.random() * Math.PI * 2;
+        const rotationQuaternion = new THREE.Quaternion().setFromAxisAngle(rotationAxis, angle);
+        
+        // Apply both quaternions
+        treeMesh.quaternion.premultiply(rotationQuaternion);
+        
+        // Scale the tree
+        treeMesh.scale.set(treeData.scale, treeData.scale, treeData.scale);
+        
+        // Add to planet group
+        planetGroup.add(treeMesh);
+      });
+    },
+    
+    createNormalTreeGeometry() {
+      const treeGroup = new THREE.Group();
+      
+      // Create trunk
+      const trunkGeometry = new THREE.CylinderGeometry(0.2, 0.3, 2, 5);
+      trunkGeometry.translate(0, 1, 0);
+      
+      // Create foliage (low poly)
+      const foliageGeometry = new THREE.ConeGeometry(1, 2, 6);
+      foliageGeometry.translate(0, 2.5, 0);
+      
+      return { trunk: trunkGeometry, foliage: foliageGeometry };
+    },
+    
+    createPineTreeGeometry() {
+      // Create trunk
+      const trunkGeometry = new THREE.CylinderGeometry(0.15, 0.2, 1.5, 5);
+      trunkGeometry.translate(0, 0.75, 0);
+      
+      // Create multiple layers of foliage (without using BufferGeometryUtils)
+      // Create three separate cones instead of merging them
+      const foliageGeometry1 = new THREE.ConeGeometry(0.8, 1.2, 6);
+      foliageGeometry1.translate(0, 1.8, 0);
+      
+      const foliageGeometry2 = new THREE.ConeGeometry(0.6, 1, 6);
+      foliageGeometry2.translate(0, 2.4, 0);
+      
+      const foliageGeometry3 = new THREE.ConeGeometry(0.4, 0.8, 6);
+      foliageGeometry3.translate(0, 3, 0);
+      
+      return { 
+        trunk: trunkGeometry, 
+        foliage: foliageGeometry1,
+        foliage2: foliageGeometry2,
+        foliage3: foliageGeometry3
+      };
+    },
+    
+    createSmallTreeGeometry() {
+      // Create trunk
+      const trunkGeometry = new THREE.CylinderGeometry(0.1, 0.15, 0.8, 5);
+      trunkGeometry.translate(0, 0.4, 0);
+      
+      // Create foliage (low poly)
+      const foliageGeometry = new THREE.SphereGeometry(0.5, 4, 4);
+      foliageGeometry.translate(0, 0.9, 0);
+      
+      return { trunk: trunkGeometry, foliage: foliageGeometry };
+    },
+    
+    createJungleTreeGeometry() {
+      // Create trunk (taller and thinner)
+      const trunkGeometry = new THREE.CylinderGeometry(0.15, 0.25, 3, 5);
+      trunkGeometry.translate(0, 1.5, 0);
+      
+      // Create foliage (more spherical)
+      const foliageGeometry = new THREE.SphereGeometry(1.2, 4, 4);
+      foliageGeometry.translate(0, 3, 0);
+      
+      // Create additional smaller foliage clusters
+      const foliageGeometry2 = new THREE.SphereGeometry(0.8, 4, 4);
+      foliageGeometry2.translate(0.7, 2.5, 0);
+      
+      const foliageGeometry3 = new THREE.SphereGeometry(0.8, 4, 4);
+      foliageGeometry3.translate(-0.7, 2.3, 0);
+      
+      return { 
+        trunk: trunkGeometry, 
+        foliage: foliageGeometry,
+        foliage2: foliageGeometry2,
+        foliage3: foliageGeometry3
+      };
+    },
+    
+    createSavannaTreeGeometry() {
+      // Create trunk (wider at the bottom, narrower at the top)
+      const trunkGeometry = new THREE.CylinderGeometry(0.15, 0.4, 1.8, 5);
+      trunkGeometry.translate(0, 0.9, 0);
+      
+      // Create flat-topped foliage
+      const foliageGeometry = new THREE.CylinderGeometry(1.5, 1.2, 0.5, 6);
+      foliageGeometry.translate(0, 2.1, 0);
+      
+      return { trunk: trunkGeometry, foliage: foliageGeometry };
+    },
+    
+    createTreeInstance(geometries, trunkMaterial, leafMaterial) {
+      const treeGroup = new THREE.Group();
+      
+      // Create trunk
+      const trunk = new THREE.Mesh(geometries.trunk, trunkMaterial);
+      trunk.castShadow = true;
+      trunk.receiveShadow = true;
+      treeGroup.add(trunk);
+      
+      // Create foliage
+      const foliage = new THREE.Mesh(geometries.foliage, leafMaterial);
+      foliage.castShadow = true;
+      foliage.receiveShadow = true;
+      treeGroup.add(foliage);
+      
+      // Add additional foliage layers for pine trees if they exist
+      if (geometries.foliage2) {
+        const foliage2 = new THREE.Mesh(geometries.foliage2, leafMaterial);
+        foliage2.castShadow = true;
+        foliage2.receiveShadow = true;
+        treeGroup.add(foliage2);
+      }
+      
+      if (geometries.foliage3) {
+        const foliage3 = new THREE.Mesh(geometries.foliage3, leafMaterial);
+        foliage3.castShadow = true;
+        foliage3.receiveShadow = true;
+        treeGroup.add(foliage3);
+      }
+      
+      return treeGroup;
+    },
+    
+    createRocks(planetGroup, rockPositions) {
+      // Limit the number of rocks for performance
+      const maxRocks = 80;
+      if (rockPositions.length > maxRocks) {
+        rockPositions = rockPositions.sort(() => 0.5 - Math.random()).slice(0, maxRocks);
+      }
+      
+      // Create rock geometries
+      const smallRockGeometry = this.createRockGeometry('small');
+      const mediumRockGeometry = this.createRockGeometry('medium');
+      const largeRockGeometry = this.createRockGeometry('large');
+      const desertRockGeometry = this.createRockGeometry('desert');
+      const mesaRockGeometry = this.createRockGeometry('mesa');
+      
+      // Create rock materials
+      const rockMaterial = new THREE.MeshStandardMaterial({
+        color: 0x8c8c8c,
+        flatShading: true,
+        roughness: 0.9,
+        metalness: 0.1
+      });
+      
+      const darkRockMaterial = new THREE.MeshStandardMaterial({
+        color: 0x555555,
+        flatShading: true,
+        roughness: 0.8,
+        metalness: 0.2
+      });
+      
+      const redRockMaterial = new THREE.MeshStandardMaterial({
+        color: 0x9e6359,
+        flatShading: true,
+        roughness: 0.9,
+        metalness: 0.1
+      });
+      
+      const mesaRockMaterial = new THREE.MeshStandardMaterial({
+        color: 0xc17753,
+        flatShading: true,
+        roughness: 0.7,
+        metalness: 0.1
+      });
+      
+      // Create rock instances
+      rockPositions.forEach(rockData => {
+        let rockGeometry;
+        let material;
+        
+        switch(rockData.type) {
+          case 'large':
+            rockGeometry = largeRockGeometry;
+            material = Math.random() > 0.5 ? rockMaterial : darkRockMaterial;
+            break;
+          case 'medium':
+            rockGeometry = mediumRockGeometry;
+            material = Math.random() > 0.5 ? rockMaterial : darkRockMaterial;
+            break;
+          case 'desert':
+            rockGeometry = desertRockGeometry;
+            material = redRockMaterial;
+            break;
+          case 'mesa':
+            rockGeometry = mesaRockGeometry;
+            material = mesaRockMaterial;
+            break;
+          case 'small':
+          default:
+            rockGeometry = smallRockGeometry;
+            material = Math.random() > 0.5 ? rockMaterial : darkRockMaterial;
+            break;
+        }
+        
+        const rockMesh = new THREE.Mesh(rockGeometry, material);
+        rockMesh.castShadow = true;
+        rockMesh.receiveShadow = true;
+        
+        // Get the original position from the terrain
+        const originalPos = rockData.position.clone();
+        
+        // Get the normalized direction from center to position
+        const direction = originalPos.clone().normalize();
+        
+        // Position the rock on the surface with a slight offset to prevent z-fighting
+        const surfaceOffset = 0.03;
+        const rockPos = originalPos.clone().add(direction.multiplyScalar(surfaceOffset));
+        rockMesh.position.copy(rockPos);
+        
+        // Create a quaternion that rotates from the up vector (0,1,0) to the direction from center to rock
+        const upVector = new THREE.Vector3(0, 1, 0);
+        const normalVector = direction.clone();
+        
+        // Create a quaternion to rotate from up vector to normal vector
+        const quaternion = new THREE.Quaternion().setFromUnitVectors(upVector, normalVector);
+        rockMesh.setRotationFromQuaternion(quaternion);
+        
+        // Add random rotation around the normal axis
+        const rotationAxis = normalVector.clone();
+        const angle = Math.random() * Math.PI * 2;
+        const rotationQuaternion = new THREE.Quaternion().setFromAxisAngle(rotationAxis, angle);
+        
+        // Apply both quaternions
+        rockMesh.quaternion.premultiply(rotationQuaternion);
+        
+        // Scale the rock
+        rockMesh.scale.set(rockData.scale, rockData.scale, rockData.scale);
+        
+        // Add to planet group
+        planetGroup.add(rockMesh);
+      });
+    },
+    
+    createRockGeometry(size) {
+      let geometry;
+      
+      switch(size) {
+        case 'large':
+          // Create a more complex rock shape for large rocks
+          geometry = new THREE.IcosahedronGeometry(1, 0);
+          break;
+        case 'medium':
+          // Medium rocks use octahedron
+          geometry = new THREE.OctahedronGeometry(1, 0);
+          break;
+        case 'desert':
+          // Desert rocks are more eroded and flat-topped
+          geometry = new THREE.CylinderGeometry(0.7, 1, 1, 6, 1);
+          break;
+        case 'mesa':
+          // Mesa rocks are flat-topped formations
+          geometry = new THREE.CylinderGeometry(0.8, 1, 1.5, 6, 1);
+          break;
+        case 'small':
+        default:
+          // Small rocks use tetrahedron
+          geometry = new THREE.TetrahedronGeometry(1, 0);
+          break;
+      }
+      
+      // Deform the geometry to make it look more like a rock
+      const positions = geometry.attributes.position;
+      const vertexCount = positions.count;
+      
+      for (let i = 0; i < vertexCount; i++) {
+        const x = positions.getX(i);
+        const y = positions.getY(i);
+        const z = positions.getZ(i);
+        
+        // Add random displacement to each vertex
+        let displacement;
+        
+        if (size === 'desert' || size === 'mesa') {
+          // Less deformation on top for flat-topped rocks
+          if (y > 0.5) {
+            displacement = (Math.random() - 0.5) * 0.1;
+          } else {
+            displacement = (Math.random() - 0.5) * 0.3;
+          }
+        } else {
+          displacement = (Math.random() - 0.5) * 0.3;
+        }
+        
+        positions.setX(i, x * (1 + displacement));
+        positions.setY(i, y * (1 + displacement));
+        positions.setZ(i, z * (1 + displacement));
+      }
+      
+      // Update normals
+      geometry.computeVertexNormals();
+      
+      return geometry;
+    },
+    
+    createGrass(planetGroup, grassPositions) {
+      // Limit the number of grass clumps for performance
+      const maxGrass = 120;
+      if (grassPositions.length > maxGrass) {
+        grassPositions = grassPositions.sort(() => 0.5 - Math.random()).slice(0, maxGrass);
+      }
+      
+      // Create grass geometries
+      const beachGrassGeometry = this.createGrassGeometry('beach');
+      const plainsGrassGeometry = this.createGrassGeometry('plains');
+      
+      // Create grass materials
+      const beachGrassMaterial = new THREE.MeshStandardMaterial({
+        color: 0xd9c07e,
+        flatShading: true,
+        roughness: 0.9,
+        metalness: 0.0
+      });
+      
+      const plainsGrassMaterial = new THREE.MeshStandardMaterial({
+        color: 0x7caa2d,
+        flatShading: true,
+        roughness: 0.9,
+        metalness: 0.0
+      });
+      
+      // Create grass instances
+      grassPositions.forEach(grassData => {
+        let geometry, material;
+        
+        if (grassData.type === 'beach') {
+          geometry = beachGrassGeometry;
+          material = beachGrassMaterial;
+        } else {
+          geometry = plainsGrassGeometry;
+          material = plainsGrassMaterial;
+        }
+        
+        const grassMesh = new THREE.Mesh(geometry, material);
+        grassMesh.castShadow = true;
+        grassMesh.receiveShadow = true;
+        
+        // Get the original position from the terrain
+        const originalPos = grassData.position.clone();
+        
+        // Get the normalized direction from center to position
+        const direction = originalPos.clone().normalize();
+        
+        // Position the grass on the surface with a slight offset
+        const surfaceOffset = 0.02;
+        const grassPos = originalPos.clone().add(direction.multiplyScalar(surfaceOffset));
+        grassMesh.position.copy(grassPos);
+        
+        // Create a quaternion that rotates from the up vector (0,1,0) to the direction from center to grass
+        const upVector = new THREE.Vector3(0, 1, 0);
+        const normalVector = direction.clone();
+        
+        // Create a quaternion to rotate from up vector to normal vector
+        const quaternion = new THREE.Quaternion().setFromUnitVectors(upVector, normalVector);
+        grassMesh.setRotationFromQuaternion(quaternion);
+        
+        // Add random rotation around the normal axis
+        const rotationAxis = normalVector.clone();
+        const angle = Math.random() * Math.PI * 2;
+        const rotationQuaternion = new THREE.Quaternion().setFromAxisAngle(rotationAxis, angle);
+        
+        // Apply both quaternions
+        grassMesh.quaternion.premultiply(rotationQuaternion);
+        
+        // Scale the grass
+        grassMesh.scale.set(grassData.scale, grassData.scale, grassData.scale);
+        
+        // Add to planet group
+        planetGroup.add(grassMesh);
+      });
+    },
+    
+    createGrassGeometry(type) {
+      // Create a simple grass clump
+      const grassGroup = new THREE.Group();
+      
+      if (type === 'beach') {
+        // Beach grass is taller and sparser
+        const bladeCount = 5;
+        const geometry = new THREE.BufferGeometry();
+        const vertices = [];
+        
+        for (let i = 0; i < bladeCount; i++) {
+          const angle = (i / bladeCount) * Math.PI * 2;
+          const radius = 0.1 + Math.random() * 0.1;
+          
+          // Base of blade
+          vertices.push(
+            Math.cos(angle) * radius, 0, Math.sin(angle) * radius,
+            Math.cos(angle) * radius * 0.8, 0.5 + Math.random() * 0.5, Math.sin(angle) * radius * 0.8,
+            Math.cos(angle + 0.1) * radius, 0, Math.sin(angle + 0.1) * radius
+          );
+        }
+        
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        geometry.computeVertexNormals();
+        
+        return geometry;
+      } else {
+        // Plains grass is shorter and denser
+        const geometry = new THREE.ConeGeometry(0.2, 0.4, 4, 1);
+        geometry.translate(0, 0.2, 0);
+        
+        // Deform the geometry to make it look more natural
+        const positions = geometry.attributes.position;
+        const vertexCount = positions.count;
+        
+        for (let i = 0; i < vertexCount; i++) {
+          const x = positions.getX(i);
+          const y = positions.getY(i);
+          const z = positions.getZ(i);
+          
+          // Add random displacement to each vertex
+          if (y > 0.1) { // Don't deform the base too much
+            const displacement = (Math.random() - 0.5) * 0.2;
+            positions.setX(i, x * (1 + displacement));
+            positions.setZ(i, z * (1 + displacement));
+          }
+        }
+        
+        geometry.computeVertexNormals();
+        return geometry;
+      }
+    },
+    
+    createSpecialFeatures(planetGroup, specialFeaturePositions) {
+      // Limit the number of special features for performance
+      const maxFeatures = 50;
+      if (specialFeaturePositions.length > maxFeatures) {
+        specialFeaturePositions = specialFeaturePositions.sort(() => 0.5 - Math.random()).slice(0, maxFeatures);
+      }
+      
+      // Create special feature geometries
+      const cactusGeometry = this.createCactusGeometry();
+      
+      // Create materials
+      const cactusMaterial = new THREE.MeshStandardMaterial({
+        color: 0x2d8659,
+        flatShading: true,
+        roughness: 0.9,
+        metalness: 0.0
+      });
+      
+      // Create special feature instances
+      specialFeaturePositions.forEach(featureData => {
+        let featureMesh;
+        
+        switch(featureData.type) {
+          case 'cactus':
+            featureMesh = this.createCactusInstance(cactusGeometry, cactusMaterial);
+            break;
+          default:
+            // Default to a simple sphere if type is unknown
+            const geometry = new THREE.SphereGeometry(1, 4, 4);
+            featureMesh = new THREE.Mesh(geometry, cactusMaterial);
+            break;
+        }
+        
+        // Get the original position from the terrain
+        const originalPos = featureData.position.clone();
+        
+        // Get the normalized direction from center to position
+        const direction = originalPos.clone().normalize();
+        
+        // Position the feature on the surface with a slight offset
+        const surfaceOffset = 0.04;
+        const featurePos = originalPos.clone().add(direction.multiplyScalar(surfaceOffset));
+        featureMesh.position.copy(featurePos);
+        
+        // Create a quaternion that rotates from the up vector (0,1,0) to the direction from center to feature
+        const upVector = new THREE.Vector3(0, 1, 0);
+        const normalVector = direction.clone();
+        
+        // Create a quaternion to rotate from up vector to normal vector
+        const quaternion = new THREE.Quaternion().setFromUnitVectors(upVector, normalVector);
+        featureMesh.setRotationFromQuaternion(quaternion);
+        
+        // Add random rotation around the normal axis
+        const rotationAxis = normalVector.clone();
+        const angle = Math.random() * Math.PI * 2;
+        const rotationQuaternion = new THREE.Quaternion().setFromAxisAngle(rotationAxis, angle);
+        
+        // Apply both quaternions
+        featureMesh.quaternion.premultiply(rotationQuaternion);
+        
+        // Scale the feature
+        featureMesh.scale.set(featureData.scale, featureData.scale, featureData.scale);
+        
+        // Add to planet group
+        planetGroup.add(featureMesh);
+      });
+    },
+    
+    createCactusGeometry() {
+      // Create main body
+      const bodyGeometry = new THREE.CylinderGeometry(0.3, 0.4, 2, 6);
+      bodyGeometry.translate(0, 1, 0);
+      
+      // Create arms (50% chance for each arm)
+      const hasLeftArm = Math.random() > 0.5;
+      const hasRightArm = Math.random() > 0.5;
+      
+      let leftArmGeometry = null;
+      let rightArmGeometry = null;
+      
+      if (hasLeftArm) {
+        leftArmGeometry = new THREE.CylinderGeometry(0.2, 0.2, 1, 6);
+        leftArmGeometry.translate(-0.5, 1.5, 0);
+        leftArmGeometry.rotateZ(Math.PI / 4);
+      }
+      
+      if (hasRightArm) {
+        rightArmGeometry = new THREE.CylinderGeometry(0.2, 0.2, 1, 6);
+        rightArmGeometry.translate(0.5, 1.3, 0);
+        rightArmGeometry.rotateZ(-Math.PI / 4);
+      }
+      
+      return {
+        body: bodyGeometry,
+        leftArm: leftArmGeometry,
+        rightArm: rightArmGeometry
+      };
+    },
+    
+    createCactusInstance(geometries, material) {
+      const cactusGroup = new THREE.Group();
+      
+      // Create body
+      const body = new THREE.Mesh(geometries.body, material);
+      body.castShadow = true;
+      body.receiveShadow = true;
+      cactusGroup.add(body);
+      
+      // Add arms if they exist
+      if (geometries.leftArm) {
+        const leftArm = new THREE.Mesh(geometries.leftArm, material);
+        leftArm.castShadow = true;
+        leftArm.receiveShadow = true;
+        cactusGroup.add(leftArm);
+      }
+      
+      if (geometries.rightArm) {
+        const rightArm = new THREE.Mesh(geometries.rightArm, material);
+        rightArm.castShadow = true;
+        rightArm.receiveShadow = true;
+        cactusGroup.add(rightArm);
+      }
+      
+      return cactusGroup;
     },
     
     startGame() {
@@ -704,409 +1218,141 @@ export default function tinyPlanetsGame() {
       camera = null;
       renderer = null;
       controls = null;
-      this.planet = null;
+      this.planetGroup = null;
     },
     
-    addNatureAssets(planetGroup, treePositions, rockPositions, grassPositions) {
-      // Create tree meshes
-      this.createTrees(planetGroup, treePositions);
+    createWater(planetGroup, radius) {
+      // Create noise for water level calculation
+      const noise = new SimplexNoise();
       
-      // Create rock meshes
-      this.createRocks(planetGroup, rockPositions);
-      
-      // Create grass meshes
-      this.createGrass(planetGroup, grassPositions);
-    },
-    
-    createTrees(planetGroup, treePositions) {
-      // Limit the number of trees for performance
-      const maxTrees = 100;
-      if (treePositions.length > maxTrees) {
-        treePositions = treePositions.sort(() => 0.5 - Math.random()).slice(0, maxTrees);
-      }
-      
-      // Create tree geometries
-      const normalTreeGeometry = this.createNormalTreeGeometry();
-      const pineTreeGeometry = this.createPineTreeGeometry();
-      const smallTreeGeometry = this.createSmallTreeGeometry();
-      
-      // Create tree materials
-      const trunkMaterial = new THREE.MeshStandardMaterial({
-        color: 0x8B4513,
-        flatShading: true,
-        roughness: 0.9,
-        metalness: 0.0
+      // Create water sphere
+      const waterGeometry = new THREE.IcosahedronGeometry(radius * 0.99, 3);
+      const waterMaterial = new THREE.MeshPhysicalMaterial({
+        color: 0x0077be,
+        roughness: 0.1,
+        metalness: 0.1,
+        transmission: 0.9,
+        transparent: true,
+        opacity: 0.7,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.2,
+        envMapIntensity: 1.5,
+        ior: 1.4, // Water has an IOR of ~1.33
+        reflectivity: 0.7,
+        iridescence: 0.3,
+        iridescenceIOR: 1.5
       });
       
-      const leafMaterial = new THREE.MeshStandardMaterial({
-        color: 0x2d6a1e,
-        flatShading: true,
-        roughness: 0.8,
-        metalness: 0.0
-      });
+      const water = new THREE.Mesh(waterGeometry, waterMaterial);
       
-      const darkLeafMaterial = new THREE.MeshStandardMaterial({
-        color: 0x1a4313,
-        flatShading: true,
-        roughness: 0.8,
-        metalness: 0.0
-      });
+      // Only show water where terrain is below water level
+      const waterVertices = waterGeometry.attributes.position;
+      const waterVertexCount = waterVertices.count;
       
-      // Create tree instances
-      treePositions.forEach(treeData => {
-        let treeMesh;
+      // Create a visibility array for water vertices
+      const waterVisibility = new Float32Array(waterVertexCount);
+      
+      for (let i = 0; i < waterVertexCount; i++) {
+        const x = waterVertices.getX(i);
+        const y = waterVertices.getY(i);
+        const z = waterVertices.getZ(i);
         
-        switch(treeData.type) {
-          case 'normal':
-            treeMesh = this.createTreeInstance(normalTreeGeometry, trunkMaterial, leafMaterial);
-            break;
-          case 'pine':
-            treeMesh = this.createTreeInstance(pineTreeGeometry, trunkMaterial, darkLeafMaterial);
-            break;
-          case 'small':
-          default:
-            treeMesh = this.createTreeInstance(smallTreeGeometry, trunkMaterial, leafMaterial);
-            break;
+        // Normalize the position
+        const nx = x / radius;
+        const ny = y / radius;
+        const nz = z / radius;
+        
+        // Calculate height at this point
+        let elevation = 0;
+        elevation += noise.noise3d(nx * 1.5, ny * 1.5, nz * 1.5) * 0.5;
+        elevation += noise.noise3d(nx * 3, ny * 3, nz * 3) * 0.25;
+        elevation += noise.noise3d(nx * 6, ny * 6, nz * 6) * 0.125;
+        elevation += noise.noise3d(nx * 12, ny * 12, nz * 12) * 0.0625;
+        
+        // If terrain is above water level, hide water at this point
+        if (elevation > -0.1) {
+          // Move water vertex inward to hide it
+          waterVertices.setX(i, x * 0.95);
+          waterVertices.setY(i, y * 0.95);
+          waterVertices.setZ(i, z * 0.95);
         }
-        
-        // Position and scale the tree
-        const pos = treeData.position.clone().normalize();
-        const scale = treeData.scale;
-        
-        // Calculate the up direction (normal to the planet surface)
-        const up = pos.clone().normalize();
-        
-        // Position the tree on the surface
-        const treePos = pos.multiplyScalar(4 + scale * 2); // Adjust based on planet radius
-        treeMesh.position.copy(treePos);
-        
-        // Orient the tree to stand on the planet surface
-        treeMesh.lookAt(new THREE.Vector3(0, 0, 0));
-        treeMesh.rotateX(Math.PI / 2); // Adjust rotation to point away from center
-        
-        // Scale the tree
-        treeMesh.scale.set(scale, scale, scale);
-        
-        // Add random rotation around the up axis
-        treeMesh.rotateOnAxis(up, Math.random() * Math.PI * 2);
-        
-        // Add to planet group
-        planetGroup.add(treeMesh);
-      });
-    },
-    
-    createNormalTreeGeometry() {
-      const treeGroup = new THREE.Group();
-      
-      // Create trunk
-      const trunkGeometry = new THREE.CylinderGeometry(0.2, 0.3, 2, 5);
-      trunkGeometry.translate(0, 1, 0);
-      
-      // Create foliage (low poly)
-      const foliageGeometry = new THREE.ConeGeometry(1, 2, 6);
-      foliageGeometry.translate(0, 2.5, 0);
-      
-      return { trunk: trunkGeometry, foliage: foliageGeometry };
-    },
-    
-    createPineTreeGeometry() {
-      // Create trunk
-      const trunkGeometry = new THREE.CylinderGeometry(0.15, 0.2, 1.5, 5);
-      trunkGeometry.translate(0, 0.75, 0);
-      
-      // Create multiple layers of foliage (without using BufferGeometryUtils)
-      // Create three separate cones instead of merging them
-      const foliageGeometry1 = new THREE.ConeGeometry(0.8, 1.2, 6);
-      foliageGeometry1.translate(0, 1.8, 0);
-      
-      const foliageGeometry2 = new THREE.ConeGeometry(0.6, 1, 6);
-      foliageGeometry2.translate(0, 2.4, 0);
-      
-      const foliageGeometry3 = new THREE.ConeGeometry(0.4, 0.8, 6);
-      foliageGeometry3.translate(0, 3, 0);
-      
-      return { 
-        trunk: trunkGeometry, 
-        foliage: foliageGeometry1,
-        foliage2: foliageGeometry2,
-        foliage3: foliageGeometry3
-      };
-    },
-    
-    createSmallTreeGeometry() {
-      // Create trunk
-      const trunkGeometry = new THREE.CylinderGeometry(0.1, 0.15, 0.8, 5);
-      trunkGeometry.translate(0, 0.4, 0);
-      
-      // Create foliage (low poly)
-      const foliageGeometry = new THREE.SphereGeometry(0.5, 4, 4);
-      foliageGeometry.translate(0, 0.9, 0);
-      
-      return { trunk: trunkGeometry, foliage: foliageGeometry };
-    },
-    
-    createTreeInstance(geometries, trunkMaterial, leafMaterial) {
-      const treeGroup = new THREE.Group();
-      
-      // Create trunk
-      const trunk = new THREE.Mesh(geometries.trunk, trunkMaterial);
-      trunk.castShadow = true;
-      trunk.receiveShadow = true;
-      treeGroup.add(trunk);
-      
-      // Create foliage
-      const foliage = new THREE.Mesh(geometries.foliage, leafMaterial);
-      foliage.castShadow = true;
-      foliage.receiveShadow = true;
-      treeGroup.add(foliage);
-      
-      // Add additional foliage layers for pine trees if they exist
-      if (geometries.foliage2) {
-        const foliage2 = new THREE.Mesh(geometries.foliage2, leafMaterial);
-        foliage2.castShadow = true;
-        foliage2.receiveShadow = true;
-        treeGroup.add(foliage2);
       }
       
-      if (geometries.foliage3) {
-        const foliage3 = new THREE.Mesh(geometries.foliage3, leafMaterial);
-        foliage3.castShadow = true;
-        foliage3.receiveShadow = true;
-        treeGroup.add(foliage3);
-      }
+      water.castShadow = false;
+      water.receiveShadow = true;
+      planetGroup.add(water);
       
-      return treeGroup;
+      // Store water reference for animation
+      this.water = water;
+      this.waterBaseRadius = radius * 0.99;
+      this.waterLevel = -0.1;
+      this.waterTime = 0;
     },
     
-    createRocks(planetGroup, rockPositions) {
-      // Limit the number of rocks for performance
-      const maxRocks = 80;
-      if (rockPositions.length > maxRocks) {
-        rockPositions = rockPositions.sort(() => 0.5 - Math.random()).slice(0, maxRocks);
-      }
+    createClouds(planetGroup, radius) {
+      // Create cloud particles
+      const cloudCount = 200;
+      const cloudGeometry = new THREE.BufferGeometry();
+      const cloudPositions = new Float32Array(cloudCount * 3);
+      const cloudSizes = new Float32Array(cloudCount);
       
-      // Create rock geometries
-      const smallRockGeometry = this.createRockGeometry('small');
-      const mediumRockGeometry = this.createRockGeometry('medium');
-      const largeRockGeometry = this.createRockGeometry('large');
+      // Create noise for cloud distribution
+      const noise = new SimplexNoise();
       
-      // Create rock materials
-      const rockMaterial = new THREE.MeshStandardMaterial({
-        color: 0x8c8c8c,
-        flatShading: true,
-        roughness: 0.9,
-        metalness: 0.1
-      });
-      
-      const darkRockMaterial = new THREE.MeshStandardMaterial({
-        color: 0x555555,
-        flatShading: true,
-        roughness: 0.8,
-        metalness: 0.2
-      });
-      
-      // Create rock instances
-      rockPositions.forEach(rockData => {
-        let rockGeometry;
-        let material = Math.random() > 0.5 ? rockMaterial : darkRockMaterial;
+      // Generate cloud positions on the sphere
+      for (let i = 0; i < cloudCount; i++) {
+        // Generate random point on sphere
+        const phi = Math.acos(-1 + (2 * i) / cloudCount);
+        const theta = Math.sqrt(cloudCount * Math.PI) * phi;
         
-        switch(rockData.type) {
-          case 'large':
-            rockGeometry = largeRockGeometry;
-            break;
-          case 'medium':
-            rockGeometry = mediumRockGeometry;
-            break;
-          case 'small':
-          default:
-            rockGeometry = smallRockGeometry;
-            break;
-        }
+        // Convert to Cartesian coordinates
+        let x = radius * Math.sin(phi) * Math.cos(theta);
+        let y = radius * Math.sin(phi) * Math.sin(theta);
+        let z = radius * Math.cos(phi);
         
-        const rockMesh = new THREE.Mesh(rockGeometry, material);
-        rockMesh.castShadow = true;
-        rockMesh.receiveShadow = true;
+        // Add some noise to the positions
+        const nx = x / radius;
+        const ny = y / radius;
+        const nz = z / radius;
         
-        // Position and scale the rock
-        const pos = rockData.position.clone().normalize();
-        const scale = rockData.scale;
+        // Only place clouds where noise is positive (creates cloud clusters)
+        const cloudNoise = noise.noise3d(nx * 2, ny * 2, nz * 2);
         
-        // Position the rock on the surface
-        const rockPos = pos.multiplyScalar(4 + scale * 0.5); // Adjust based on planet radius
-        rockMesh.position.copy(rockPos);
-        
-        // Orient the rock to lie on the planet surface
-        rockMesh.lookAt(new THREE.Vector3(0, 0, 0));
-        rockMesh.rotateX(Math.PI / 2); // Adjust rotation to point away from center
-        
-        // Add random rotation for variety
-        rockMesh.rotation.z = Math.random() * Math.PI * 2;
-        
-        // Scale the rock
-        rockMesh.scale.set(scale, scale, scale);
-        
-        // Add to planet group
-        planetGroup.add(rockMesh);
-      });
-    },
-    
-    createRockGeometry(size) {
-      let geometry;
-      
-      switch(size) {
-        case 'large':
-          // Create a more complex rock shape for large rocks
-          geometry = new THREE.IcosahedronGeometry(1, 0);
-          break;
-        case 'medium':
-          // Medium rocks use octahedron
-          geometry = new THREE.OctahedronGeometry(1, 0);
-          break;
-        case 'small':
-        default:
-          // Small rocks use tetrahedron
-          geometry = new THREE.TetrahedronGeometry(1, 0);
-          break;
-      }
-      
-      // Deform the geometry to make it look more like a rock
-      const positions = geometry.attributes.position;
-      const vertexCount = positions.count;
-      
-      for (let i = 0; i < vertexCount; i++) {
-        const x = positions.getX(i);
-        const y = positions.getY(i);
-        const z = positions.getZ(i);
-        
-        // Add random displacement to each vertex
-        const displacement = (Math.random() - 0.5) * 0.3;
-        positions.setX(i, x * (1 + displacement));
-        positions.setY(i, y * (1 + displacement));
-        positions.setZ(i, z * (1 + displacement));
-      }
-      
-      // Update normals
-      geometry.computeVertexNormals();
-      
-      return geometry;
-    },
-    
-    createGrass(planetGroup, grassPositions) {
-      // Limit the number of grass clumps for performance
-      const maxGrass = 120;
-      if (grassPositions.length > maxGrass) {
-        grassPositions = grassPositions.sort(() => 0.5 - Math.random()).slice(0, maxGrass);
-      }
-      
-      // Create grass geometries
-      const beachGrassGeometry = this.createGrassGeometry('beach');
-      const plainsGrassGeometry = this.createGrassGeometry('plains');
-      
-      // Create grass materials
-      const beachGrassMaterial = new THREE.MeshStandardMaterial({
-        color: 0xd9c07e,
-        flatShading: true,
-        roughness: 0.9,
-        metalness: 0.0
-      });
-      
-      const plainsGrassMaterial = new THREE.MeshStandardMaterial({
-        color: 0x7caa2d,
-        flatShading: true,
-        roughness: 0.9,
-        metalness: 0.0
-      });
-      
-      // Create grass instances
-      grassPositions.forEach(grassData => {
-        let geometry, material;
-        
-        if (grassData.type === 'beach') {
-          geometry = beachGrassGeometry;
-          material = beachGrassMaterial;
+        if (cloudNoise > 0.1) {
+          cloudPositions[i * 3] = x;
+          cloudPositions[i * 3 + 1] = y;
+          cloudPositions[i * 3 + 2] = z;
+          
+          // Vary cloud size based on noise
+          cloudSizes[i] = 0.2 + cloudNoise * 0.3;
         } else {
-          geometry = plainsGrassGeometry;
-          material = plainsGrassMaterial;
+          // Place cloud below planet (will not be visible)
+          cloudPositions[i * 3] = 0;
+          cloudPositions[i * 3 + 1] = -radius * 2;
+          cloudPositions[i * 3 + 2] = 0;
+          cloudSizes[i] = 0;
         }
-        
-        const grassMesh = new THREE.Mesh(geometry, material);
-        grassMesh.castShadow = true;
-        grassMesh.receiveShadow = true;
-        
-        // Position and scale the grass
-        const pos = grassData.position.clone().normalize();
-        const scale = grassData.scale;
-        
-        // Position the grass on the surface
-        const grassPos = pos.multiplyScalar(4 + scale * 0.2); // Adjust based on planet radius
-        grassMesh.position.copy(grassPos);
-        
-        // Orient the grass to stand on the planet surface
-        grassMesh.lookAt(new THREE.Vector3(0, 0, 0));
-        grassMesh.rotateX(Math.PI / 2); // Adjust rotation to point away from center
-        
-        // Add random rotation for variety
-        grassMesh.rotation.z = Math.random() * Math.PI * 2;
-        
-        // Scale the grass
-        grassMesh.scale.set(scale, scale, scale);
-        
-        // Add to planet group
-        planetGroup.add(grassMesh);
-      });
-    },
-    
-    createGrassGeometry(type) {
-      // Create a simple grass clump
-      const grassGroup = new THREE.Group();
-      
-      if (type === 'beach') {
-        // Beach grass is taller and sparser
-        const bladeCount = 5;
-        const geometry = new THREE.BufferGeometry();
-        const vertices = [];
-        
-        for (let i = 0; i < bladeCount; i++) {
-          const angle = (i / bladeCount) * Math.PI * 2;
-          const radius = 0.1 + Math.random() * 0.1;
-          
-          // Base of blade
-          vertices.push(
-            Math.cos(angle) * radius, 0, Math.sin(angle) * radius,
-            Math.cos(angle) * radius * 0.8, 0.5 + Math.random() * 0.5, Math.sin(angle) * radius * 0.8,
-            Math.cos(angle + 0.1) * radius, 0, Math.sin(angle + 0.1) * radius
-          );
-        }
-        
-        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-        geometry.computeVertexNormals();
-        
-        return geometry;
-      } else {
-        // Plains grass is shorter and denser
-        const geometry = new THREE.ConeGeometry(0.2, 0.4, 4, 1);
-        geometry.translate(0, 0.2, 0);
-        
-        // Deform the geometry to make it look more natural
-        const positions = geometry.attributes.position;
-        const vertexCount = positions.count;
-        
-        for (let i = 0; i < vertexCount; i++) {
-          const x = positions.getX(i);
-          const y = positions.getY(i);
-          const z = positions.getZ(i);
-          
-          // Add random displacement to each vertex
-          if (y > 0.1) { // Don't deform the base too much
-            const displacement = (Math.random() - 0.5) * 0.2;
-            positions.setX(i, x * (1 + displacement));
-            positions.setZ(i, z * (1 + displacement));
-          }
-        }
-        
-        geometry.computeVertexNormals();
-        return geometry;
       }
+      
+      cloudGeometry.setAttribute('position', new THREE.BufferAttribute(cloudPositions, 3));
+      cloudGeometry.setAttribute('size', new THREE.BufferAttribute(cloudSizes, 1));
+      
+      // Create cloud material
+      const cloudMaterial = new THREE.PointsMaterial({
+        color: 0xffffff,
+        size: 0.3,
+        transparent: true,
+        opacity: 0.7,
+        sizeAttenuation: true,
+        depthWrite: false
+      });
+      
+      // Create cloud system
+      const clouds = new THREE.Points(cloudGeometry, cloudMaterial);
+      planetGroup.add(clouds);
+      
+      // Store reference for animation
+      this.clouds = clouds;
     }
   };
 } 
