@@ -622,21 +622,38 @@ function createGameInstance() {
   }
   
   function spawnObstacle() {
-    const obstacleGeometry = new THREE.DodecahedronGeometry(0.8, 0);
-    const obstacleMaterial = new THREE.MeshStandardMaterial({ 
-      color: 0x808080,
-      roughness: 0.9,
-    });
-    const obstacle = new THREE.Mesh(obstacleGeometry, obstacleMaterial);
+    // Create a hole in the ground instead of a rock
+    const holeGroup = new THREE.Group();
     
-    // Spawn obstacles in a smaller area
+    // Create a dark circle for the hole
+    const holeGeometry = new THREE.CircleGeometry(1.2, 32);
+    const holeMaterial = new THREE.MeshBasicMaterial({ 
+      color: 0x000000,
+      side: THREE.DoubleSide
+    });
+    const hole = new THREE.Mesh(holeGeometry, holeMaterial);
+    hole.rotation.x = -Math.PI / 2; // Lay flat on the ground
+    hole.position.y = 0.01; // Slightly above ground to prevent z-fighting
+    holeGroup.add(hole);
+    
+    // Add a darker ring around the hole
+    const ringGeometry = new THREE.RingGeometry(1.2, 1.5, 32);
+    const ringMaterial = new THREE.MeshBasicMaterial({ 
+      color: 0x333333,
+      side: THREE.DoubleSide
+    });
+    const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+    ring.rotation.x = -Math.PI / 2; // Lay flat on the ground
+    ring.position.y = 0.02; // Slightly above the hole
+    holeGroup.add(ring);
+    
+    // Spawn holes in a smaller area
     const x = (Math.random() - 0.5) * 15;
     const z = (Math.random() - 0.5) * 15;
-    obstacle.position.set(x, 0.8, z);
-    obstacle.rotation.y = Math.random() * Math.PI * 2;
-    obstacle.castShadow = true;
-    scene.add(obstacle);
-    obstacles.push(obstacle);
+    holeGroup.position.set(x, 0, z);
+    
+    scene.add(holeGroup);
+    obstacles.push(holeGroup);
     lastObstacleSpawn = clock.getElapsedTime() * 1000;
   }
   
@@ -874,27 +891,77 @@ function createGameInstance() {
       }
     }
     
+    // Check for hole collisions
     for (let i = 0; i < obstacles.length; i++) {
-      const obstacle = obstacles[i];
-      const obstaclePos = new THREE.Vector3().copy(obstacle.position);
+      const hole = obstacles[i];
+      const holePos = new THREE.Vector3().copy(hole.position);
       
-      // Check if player is jumping high enough over the obstacle
-      const jumpingOverObstacle = positionY > 1.2; // Minimum height to clear an obstacle
+      // Calculate horizontal distance to hole center (ignoring Y)
+      const dx = playerPos.x - holePos.x;
+      const dz = playerPos.z - holePos.z;
+      const distance = Math.sqrt(dx * dx + dz * dz);
       
-      // Only check horizontal distance if not jumping high enough
-      if (!jumpingOverObstacle) {
-        obstaclePos.y = playerPos.y;
-        const distance = playerPos.distanceTo(obstaclePos);
-        if (distance < playerRadius + 0.8) {
-          setGameOver(true);
-          setIsPaused(true);
-          setTimeout(() => {
-            setShowInstructions(true);
-          }, 1500);
-          break;
-        }
+      // If player is over a hole and not jumping high enough
+      if (distance < 1.0 && positionY < 1.5) {
+        // Start falling animation
+        fallIntoHole(hole);
+        break;
       }
     }
+  }
+  
+  function fallIntoHole(hole) {
+    // Prevent further game updates
+    setGameOver(true);
+    setIsPaused(true);
+    
+    // Get hole position
+    const holePos = hole.position.clone();
+    
+    // Animate falling into the hole
+    const startY = player.position.y;
+    const startScale = player.scale.clone();
+    const duration = 1000; // ms
+    const startTime = clock.getElapsedTime() * 1000;
+    
+    // Create a one-time animation function
+    const fallAnimation = () => {
+      const currentTime = clock.getElapsedTime() * 1000;
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Move player to hole center
+      player.position.x = player.position.x + (holePos.x - player.position.x) * progress * 0.5;
+      player.position.z = player.position.z + (holePos.z - player.position.z) * progress * 0.5;
+      
+      // Make player fall down
+      player.position.y = startY - progress * 2;
+      
+      // Shrink player as they fall
+      const scale = 1 - progress * 0.8;
+      player.scale.set(scale, scale, scale);
+      
+      // Rotate player as they fall
+      player.rotation.z = progress * Math.PI;
+      
+      // Continue animation until complete
+      if (progress < 1) {
+        requestAnimationFrame(fallAnimation);
+      } else {
+        // Animation complete, show game over
+        setTimeout(() => {
+          setShowInstructions(true);
+          
+          // Reset player position and scale for next game
+          player.position.set(0, 0.8, 0);
+          player.rotation.set(0, 0, 0);
+          player.scale.copy(startScale);
+        }, 500);
+      }
+    };
+    
+    // Start the animation
+    fallAnimation();
   }
   
   function animate() {
