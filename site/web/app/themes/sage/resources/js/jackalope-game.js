@@ -64,7 +64,6 @@ function createGameInstance() {
   let player = null;
   let carrots = [];
   let obstacles = [];
-  let platforms = []; // Array to store platforms
   let ground = null;
   
   // DOM elements
@@ -75,7 +74,6 @@ function createGameInstance() {
   const playerSpeed = 0.05;
   const carrotSpawnRate = 3000; // ms
   const obstacleSpawnRate = 5000; // ms
-  const platformCount = 8; // Number of platforms to create
   let lastCarrotSpawn = 0;
   let lastObstacleSpawn = 0;
   
@@ -157,9 +155,6 @@ function createGameInstance() {
     ground.receiveShadow = true;
     scene.add(ground);
     
-    // Create platforms
-    createPlatforms();
-    
     // Create the bouncing rabbit as the player
     createBouncingRabbit();
     
@@ -171,91 +166,6 @@ function createGameInstance() {
     setTimeout(() => {
       onWindowResize();
     }, 100);
-  }
-  
-  function createPlatforms() {
-    // Clear existing platforms
-    for (let i = platforms.length - 1; i >= 0; i--) {
-      scene.remove(platforms[i]);
-    }
-    platforms = [];
-    
-    // Create new platforms
-    for (let i = 0; i < platformCount; i++) {
-      // Create a low-poly platform
-      const platformGroup = new THREE.Group();
-      
-      // Random size for variety but not too large
-      const width = 2 + Math.random() * 2;
-      const depth = 2 + Math.random() * 2;
-      const height = 0.5 + Math.random() * 1.5;
-      
-      // Create the main platform shape
-      const platformGeometry = new THREE.BoxGeometry(width, height, depth);
-      
-      // Use a brown/gray color palette for rocks
-      const colorValue = 0.3 + Math.random() * 0.2;
-      const platformMaterial = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(
-          colorValue + Math.random() * 0.1,
-          colorValue * (0.8 + Math.random() * 0.2),
-          colorValue * (0.7 + Math.random() * 0.2)
-        ),
-        roughness: 0.8 + Math.random() * 0.2,
-        flatShading: true
-      });
-      
-      const platform = new THREE.Mesh(platformGeometry, platformMaterial);
-      
-      // Make it look more like a rock by randomly displacing vertices
-      const positionAttribute = platform.geometry.getAttribute('position');
-      
-      for (let j = 0; j < positionAttribute.count; j++) {
-        // Don't modify the bottom vertices to keep it flat for standing
-        if (positionAttribute.getY(j) > -height/2 + 0.1) {
-          // Add some random displacement to vertices for a more natural look
-          positionAttribute.setX(j, positionAttribute.getX(j) + (Math.random() - 0.5) * 0.2);
-          
-          // Only displace the top vertices on Y axis
-          if (positionAttribute.getY(j) > height/2 - 0.2) {
-            positionAttribute.setY(j, positionAttribute.getY(j) + (Math.random() - 0.5) * 0.3);
-          }
-          
-          positionAttribute.setZ(j, positionAttribute.getZ(j) + (Math.random() - 0.5) * 0.2);
-        }
-      }
-      
-      platform.geometry.computeVertexNormals();
-      platform.castShadow = true;
-      platform.receiveShadow = true;
-      
-      // Position the platform randomly in the scene but closer to the center and player
-      const x = (Math.random() - 0.5) * 15;
-      const z = (Math.random() - 0.5) * 15;
-      
-      // Vary the height of platforms
-      const y = height / 2;
-      
-      platformGroup.position.set(x, y, z);
-      
-      // Add some random rotation for variety, but keep the top flat
-      platformGroup.rotation.y = Math.random() * Math.PI * 2;
-      
-      // Store platform data for collision detection
-      platformGroup.userData = {
-        width: width,
-        depth: depth,
-        height: height
-      };
-      
-      // Add a collision box for debugging (visible in development)
-      const boxHelper = new THREE.BoxHelper(platform, 0xff0000);
-      platformGroup.add(boxHelper);
-      
-      scene.add(platformGroup);
-      platformGroup.add(platform);
-      platforms.push(platformGroup);
-    }
   }
   
   function createBouncingRabbit() {
@@ -463,34 +373,8 @@ function createGameInstance() {
     
     const currentTime = clock.getElapsedTime() * 1000;
     
-    // Check if player is on ground or on a platform
-    const playerPos = new THREE.Vector3().copy(player.position);
-    let canJump = positionY < 0.1; // On ground
-    
-    // Check if on a platform
-    if (!canJump) {
-      for (let i = 0; i < platforms.length; i++) {
-        const platform = platforms[i];
-        const platformPos = platform.position.clone();
-        const platformData = platform.userData;
-        
-        // Calculate platform boundaries
-        const halfWidth = platformData.width / 2;
-        const halfDepth = platformData.depth / 2;
-        const platformTop = platformPos.y + platformData.height / 2;
-        
-        // Check if player is on this platform
-        if (Math.abs(playerPos.x - platformPos.x) < halfWidth + 0.3 && 
-            Math.abs(playerPos.z - platformPos.z) < halfDepth + 0.3 &&
-            Math.abs(playerPos.y - (platformTop + 0.8)) < 0.2) {
-          canJump = true;
-          break;
-        }
-      }
-    }
-    
-    // Only allow jumping if on ground/platform and cooldown has passed
-    if (canJump && currentTime - lastJumpTime > jumpCooldown) {
+    // Only allow jumping if on or near the ground and cooldown has passed
+    if (positionY < 0.1 && currentTime - lastJumpTime > jumpCooldown) {
       velocityY = jumpForce;
       isJumping = true;
       lastJumpTime = currentTime;
@@ -517,7 +401,6 @@ function createGameInstance() {
     setGameOver(false);
     setScore(0);
     clearGameObjects();
-    createPlatforms(); // Recreate platforms on game start
     player.position.set(0, 0.8, 0);
     player.rotation.y = 0;
     positionY = 0; // Reset bouncing position
@@ -544,7 +427,6 @@ function createGameInstance() {
     setGameOver(false);
     setScore(0);
     clearGameObjects();
-    createPlatforms(); // Recreate platforms on reset
     player.position.set(0, 0.8, 0);
     player.rotation.y = 0;
     positionY = 0;
@@ -677,7 +559,7 @@ function createGameInstance() {
       const newX = player.position.x + Math.sin(angle) * speed;
       const newZ = player.position.z + Math.cos(angle) * speed;
       
-      // Apply movement directly - we'll handle collisions differently
+      // Apply movement directly
       player.position.x = newX;
       player.position.z = newZ;
       
@@ -685,88 +567,6 @@ function createGameInstance() {
       const boundaryLimit = 20;
       player.position.x = Math.max(-boundaryLimit, Math.min(boundaryLimit, player.position.x));
       player.position.z = Math.max(-boundaryLimit, Math.min(boundaryLimit, player.position.z));
-      
-      // Check for platform side collisions after movement
-      handlePlatformCollisions();
-    }
-  }
-  
-  function handlePlatformCollisions() {
-    // Player collision radius
-    const playerRadius = 0.5;
-    
-    // Get player's feet position
-    const playerFeetY = player.position.y - 0.8;
-    
-    // Check if player is standing on any platform
-    let standingOnPlatform = false;
-    let standingPlatformIndex = -1;
-    
-    for (let i = 0; i < platforms.length; i++) {
-      const platform = platforms[i];
-      const platformPos = platform.position.clone();
-      const platformData = platform.userData;
-      
-      // Calculate platform boundaries
-      const halfWidth = platformData.width / 2;
-      const halfDepth = platformData.depth / 2;
-      const platformTop = platformPos.y + platformData.height / 2;
-      
-      // Check if player is standing on this platform
-      if (Math.abs(playerFeetY - platformTop) < 0.3 && 
-          Math.abs(player.position.x - platformPos.x) < halfWidth + 0.3 && 
-          Math.abs(player.position.z - platformPos.z) < halfDepth + 0.3) {
-        standingOnPlatform = true;
-        standingPlatformIndex = i;
-        break;
-      }
-    }
-    
-    // If standing on a platform, we don't need to check for side collisions
-    if (standingOnPlatform) {
-      return;
-    }
-    
-    // Check for side collisions with all platforms
-    for (let i = 0; i < platforms.length; i++) {
-      const platform = platforms[i];
-      const platformPos = platform.position.clone();
-      const platformData = platform.userData;
-      
-      // Calculate platform boundaries
-      const halfWidth = platformData.width / 2;
-      const halfDepth = platformData.depth / 2;
-      const platformHeight = platformData.height;
-      const platformBottom = platformPos.y - platformHeight / 2;
-      const platformTop = platformPos.y + platformData.height / 2;
-      
-      // Only check for side collisions if player is within the height range of the platform
-      if (player.position.y < platformTop + 1.0 && 
-          player.position.y > platformBottom - 0.5) {
-        
-        // Calculate horizontal distance to platform center
-        const dx = player.position.x - platformPos.x;
-        const dz = player.position.z - platformPos.z;
-        const horizontalDistance = Math.sqrt(dx * dx + dz * dz);
-        
-        // Calculate the closest point on the platform's perimeter
-        const closestX = Math.max(-halfWidth, Math.min(halfWidth, dx));
-        const closestZ = Math.max(-halfDepth, Math.min(halfDepth, dz));
-        
-        // If player is inside the platform, push them out
-        if (Math.abs(dx) < halfWidth + playerRadius && 
-            Math.abs(dz) < halfDepth + playerRadius) {
-          
-          // Determine which side is closest to push the player out
-          if (Math.abs(dx) / halfWidth > Math.abs(dz) / halfDepth) {
-            // Push out along X axis
-            player.position.x = platformPos.x + (dx > 0 ? 1 : -1) * (halfWidth + playerRadius);
-          } else {
-            // Push out along Z axis
-            player.position.z = platformPos.z + (dz > 0 ? 1 : -1) * (halfDepth + playerRadius);
-          }
-        }
-      }
     }
   }
   
@@ -779,73 +579,12 @@ function createGameInstance() {
     // Apply gravity
     velocityY += gravity * normalizedDelta * 0.06;
     
-    // Store previous position for collision detection
-    const previousY = positionY;
-    
-    // Update position temporarily for collision testing
-    const newPositionY = positionY + velocityY;
-    
-    // Check for platform collisions
-    const playerPos = new THREE.Vector3().copy(player.position);
-    playerPos.y = 0.8 + newPositionY; // Update with potential new position
-    
-    let onPlatform = false;
-    let platformHeight = 0;
-    
-    // Check if player is on a platform
-    for (let i = 0; i < platforms.length; i++) {
-      const platform = platforms[i];
-      const platformPos = platform.position.clone();
-      const platformData = platform.userData;
-      
-      // Calculate platform boundaries with some margin for better gameplay
-      const halfWidth = platformData.width / 2;
-      const halfDepth = platformData.depth / 2;
-      const platformTop = platformPos.y + platformData.height / 2;
-      
-      // Check if player is above the platform (using a slightly larger collision box)
-      if (Math.abs(playerPos.x - platformPos.x) < halfWidth + 0.3 && 
-          Math.abs(playerPos.z - platformPos.z) < halfDepth + 0.3) {
-        
-        // Check if player is landing on the platform (coming from above)
-        // Use a more generous collision detection
-        if ((previousY + 0.8) >= platformTop && 
-            (newPositionY + 0.8) <= platformTop + 0.2 && 
-            velocityY < 0) { // Only detect when moving downward
-          
-          onPlatform = true;
-          platformHeight = platformTop - 0.8; // Adjust to stand on top
-          break;
-        }
-      }
-    }
-    
-    // Now apply the position update
+    // Update position
     positionY += velocityY;
     
-    // Handle ground and platform collisions
+    // Handle ground collision
     if (positionY < 0) {
-      // Ground collision
       positionY = 0;
-      
-      // Only bounce if we're moving and not in a deliberate jump
-      if (isMoving && !isJumping) {
-        velocityY = -velocityY * bounceFactor;
-        // Squash effect on landing
-        player.scale.y = 0.8;
-        player.scale.x = 1.1;
-        player.scale.z = 1.1;
-      } else {
-        velocityY = 0;
-        isJumping = false;
-        // Reset scale gradually
-        player.scale.y += (1 - player.scale.y) * 0.2;
-        player.scale.x += (1 - player.scale.x) * 0.2;
-        player.scale.z += (1 - player.scale.z) * 0.2;
-      }
-    } else if (onPlatform) {
-      // Platform collision
-      positionY = platformHeight;
       
       // Only bounce if we're moving and not in a deliberate jump
       if (isMoving && !isJumping) {
@@ -1044,7 +783,6 @@ function createGameInstance() {
     player = null;
     carrots = [];
     obstacles = [];
-    platforms = [];
     ground = null;
     canvas = null;
     gameContainer = null;
