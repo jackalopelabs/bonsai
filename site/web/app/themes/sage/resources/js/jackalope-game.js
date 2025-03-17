@@ -15,6 +15,9 @@ export default function jackalope3DGame() {
     showInstructions: true,
     gameOver: false,
     isFullscreen: false,
+    timeRemaining: 20,
+    carrotsCollected: 0,
+    gameWon: false,
     
     initGame() {
       game.init(this.$refs.gameCanvas, {
@@ -22,7 +25,10 @@ export default function jackalope3DGame() {
         onPauseChange: (isPaused) => { this.isPaused = isPaused; },
         onInstructionsChange: (show) => { this.showInstructions = show; },
         onGameOverChange: (isOver) => { this.gameOver = isOver; },
-        onFullscreenChange: (isFullscreen) => { this.isFullscreen = isFullscreen; }
+        onFullscreenChange: (isFullscreen) => { this.isFullscreen = isFullscreen; },
+        onTimerChange: (time) => { this.timeRemaining = time; },
+        onCarrotsChange: (carrots) => { this.carrotsCollected = carrots; },
+        onGameWonChange: (won) => { this.gameWon = won; }
       });
     },
     
@@ -56,6 +62,13 @@ function createGameInstance() {
   let isFullscreen = false;
   let callbacks = {};
   
+  // Game win/lose state
+  let gameWon = false;
+  let timeRemaining = 20; // 20 seconds time limit
+  let carrotsNeeded = 5; // Need to collect 5 carrots
+  let carrotsCollected = 0;
+  let lastTimerUpdate = 0;
+  
   let scene = null;
   let camera = null;
   let renderer = null;
@@ -63,7 +76,7 @@ function createGameInstance() {
   
   let player = null;
   let carrots = [];
-  let obstacles = [];
+  let hole = null; // Single hole as the goal
   let ground = null;
   
   // DOM elements
@@ -73,9 +86,7 @@ function createGameInstance() {
   // Game settings - reduced speed for better control
   const playerSpeed = 0.05;
   const carrotSpawnRate = 3000; // ms
-  const obstacleSpawnRate = 5000; // ms
   let lastCarrotSpawn = 0;
-  let lastObstacleSpawn = 0;
   
   const keys = {
     forward: false,
@@ -158,6 +169,9 @@ function createGameInstance() {
     // Create the bouncing rabbit as the player
     createBouncingRabbit();
     
+    // Create the goal hole
+    createGoalHole();
+    
     clock = new THREE.Clock();
     
     handleResize = () => onWindowResize();
@@ -222,6 +236,39 @@ function createGameInstance() {
     // Initial position
     player.position.y = 0.8;
     scene.add(player);
+  }
+  
+  function createGoalHole() {
+    // Create a hole in the ground as the goal
+    const holeGroup = new THREE.Group();
+    
+    // Create a dark circle for the hole
+    const holeGeometry = new THREE.CircleGeometry(1.5, 32);
+    const holeMaterial = new THREE.MeshBasicMaterial({ 
+      color: 0x000000,
+      side: THREE.DoubleSide
+    });
+    const holeMesh = new THREE.Mesh(holeGeometry, holeMaterial);
+    holeMesh.rotation.x = -Math.PI / 2; // Lay flat on the ground
+    holeMesh.position.y = 0.01; // Slightly above ground to prevent z-fighting
+    holeGroup.add(holeMesh);
+    
+    // Add a darker ring around the hole
+    const ringGeometry = new THREE.RingGeometry(1.5, 1.8, 32);
+    const ringMaterial = new THREE.MeshBasicMaterial({ 
+      color: 0x333333,
+      side: THREE.DoubleSide
+    });
+    const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+    ring.rotation.x = -Math.PI / 2; // Lay flat on the ground
+    ring.position.y = 0.02; // Slightly above the hole
+    holeGroup.add(ring);
+    
+    // Position the hole at a fixed location
+    holeGroup.position.set(0, 0, -10);
+    
+    scene.add(holeGroup);
+    hole = holeGroup;
   }
   
   function setupEventListeners() {
@@ -399,7 +446,11 @@ function createGameInstance() {
     setShowInstructions(false);
     setIsPaused(false);
     setGameOver(false);
+    gameWon = false;
     setScore(0);
+    carrotsCollected = 0;
+    timeRemaining = 20;
+    lastTimerUpdate = clock.getElapsedTime() * 1000;
     clearGameObjects();
     player.position.set(0, 0.8, 0);
     player.rotation.y = 0;
@@ -408,7 +459,11 @@ function createGameInstance() {
     isJumping = false;
     lastJumpTime = 0;
     lastCarrotSpawn = clock.getElapsedTime() * 1000;
-    lastObstacleSpawn = clock.getElapsedTime() * 1000;
+    
+    // Spawn initial carrots
+    for (let i = 0; i < 8; i++) {
+      spawnCarrot();
+    }
     
     // Focus the canvas to ensure keyboard events work
     if (canvas) {
@@ -439,10 +494,6 @@ function createGameInstance() {
       scene.remove(carrots[i]);
     }
     carrots = [];
-    for (let i = obstacles.length - 1; i >= 0; i--) {
-      scene.remove(obstacles[i]);
-    }
-    obstacles = [];
   }
   
   function onWindowResize() {
@@ -495,48 +546,30 @@ function createGameInstance() {
     }
     
     // Spawn carrots in a smaller area for easier collection
-    const x = (Math.random() - 0.5) * 15;
-    const z = (Math.random() - 0.5) * 15;
+    // Avoid spawning too close to the hole
+    let x, z;
+    let validPosition = false;
+    
+    while (!validPosition) {
+      x = (Math.random() - 0.5) * 15;
+      z = (Math.random() - 0.5) * 15;
+      
+      // Check distance from hole
+      const distanceToHole = Math.sqrt(
+        Math.pow(x - hole.position.x, 2) + 
+        Math.pow(z - hole.position.z, 2)
+      );
+      
+      // Make sure carrot is not too close to the hole
+      if (distanceToHole > 3) {
+        validPosition = true;
+      }
+    }
+    
     carrotGroup.position.set(x, 0, z);
     scene.add(carrotGroup);
     carrots.push(carrotGroup);
     lastCarrotSpawn = clock.getElapsedTime() * 1000;
-  }
-  
-  function spawnObstacle() {
-    // Create a hole in the ground instead of a rock
-    const holeGroup = new THREE.Group();
-    
-    // Create a dark circle for the hole
-    const holeGeometry = new THREE.CircleGeometry(1.2, 32);
-    const holeMaterial = new THREE.MeshBasicMaterial({ 
-      color: 0x000000,
-      side: THREE.DoubleSide
-    });
-    const hole = new THREE.Mesh(holeGeometry, holeMaterial);
-    hole.rotation.x = -Math.PI / 2; // Lay flat on the ground
-    hole.position.y = 0.01; // Slightly above ground to prevent z-fighting
-    holeGroup.add(hole);
-    
-    // Add a darker ring around the hole
-    const ringGeometry = new THREE.RingGeometry(1.2, 1.5, 32);
-    const ringMaterial = new THREE.MeshBasicMaterial({ 
-      color: 0x333333,
-      side: THREE.DoubleSide
-    });
-    const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-    ring.rotation.x = -Math.PI / 2; // Lay flat on the ground
-    ring.position.y = 0.02; // Slightly above the hole
-    holeGroup.add(ring);
-    
-    // Spawn holes in a smaller area
-    const x = (Math.random() - 0.5) * 15;
-    const z = (Math.random() - 0.5) * 15;
-    holeGroup.position.set(x, 0, z);
-    
-    scene.add(holeGroup);
-    obstacles.push(holeGroup);
-    lastObstacleSpawn = clock.getElapsedTime() * 1000;
   }
   
   function updatePlayer(deltaTime) {
@@ -618,6 +651,7 @@ function createGameInstance() {
     const playerPos = new THREE.Vector3().copy(player.position);
     const playerRadius = 0.8;
     
+    // Check for carrot collisions
     for (let i = carrots.length - 1; i >= 0; i--) {
       const carrot = carrots[i];
       const carrotPos = new THREE.Vector3().copy(carrot.position);
@@ -626,13 +660,19 @@ function createGameInstance() {
       if (distance < playerRadius + 0.4) {
         scene.remove(carrot);
         carrots.splice(i, 1);
-        setScore(score + 10);
+        carrotsCollected++;
+        setCarrotsCollected(carrotsCollected);
+        setScore(carrotsCollected * 10);
+        
+        // Spawn a new carrot if we haven't collected enough yet
+        if (carrotsCollected < carrotsNeeded) {
+          spawnCarrot();
+        }
       }
     }
     
-    // Check for hole collisions
-    for (let i = 0; i < obstacles.length; i++) {
-      const hole = obstacles[i];
+    // Check for hole collision (only if we have enough carrots)
+    if (carrotsCollected >= carrotsNeeded) {
       const holePos = new THREE.Vector3().copy(hole.position);
       
       // Calculate horizontal distance to hole center (ignoring Y)
@@ -640,16 +680,16 @@ function createGameInstance() {
       const dz = playerPos.z - holePos.z;
       const distance = Math.sqrt(dx * dx + dz * dz);
       
-      // If player is over a hole and not jumping high enough
-      if (distance < 1.0 && positionY < 1.5) {
-        // Start falling animation
-        fallIntoHole(hole);
-        break;
+      // If player is over the hole and not jumping high
+      if (distance < 1.2 && positionY < 1.0) {
+        // Player wins!
+        setGameWon(true);
+        winGame();
       }
     }
   }
   
-  function fallIntoHole(hole) {
+  function winGame() {
     // Prevent further game updates
     setGameOver(true);
     setIsPaused(true);
@@ -687,7 +727,7 @@ function createGameInstance() {
       if (progress < 1) {
         requestAnimationFrame(fallAnimation);
       } else {
-        // Animation complete, show game over
+        // Animation complete, show game over with win message
         setTimeout(() => {
           setShowInstructions(true);
           
@@ -703,6 +743,42 @@ function createGameInstance() {
     fallAnimation();
   }
   
+  function updateTimer(deltaTime) {
+    if (isPaused || showInstructions || gameOver) return;
+    
+    // Update timer
+    timeRemaining -= deltaTime / 1000; // Convert ms to seconds
+    
+    // Update the display every second
+    const currentTime = clock.getElapsedTime() * 1000;
+    if (currentTime - lastTimerUpdate > 1000) {
+      lastTimerUpdate = currentTime;
+      
+      // Update timer display if needed
+      if (callbacks.onTimerChange) {
+        callbacks.onTimerChange(Math.ceil(timeRemaining));
+      }
+    }
+    
+    // Check if time is up
+    if (timeRemaining <= 0) {
+      timeRemaining = 0;
+      setGameWon(false);
+      loseGame();
+    }
+  }
+  
+  function loseGame() {
+    gameWon = false;
+    setGameOver(true);
+    setIsPaused(true);
+    
+    // Show game over with lose message
+    setTimeout(() => {
+      setShowInstructions(true);
+    }, 500);
+  }
+  
   function animate() {
     animationFrameId = requestAnimationFrame(animate);
     
@@ -713,15 +789,16 @@ function createGameInstance() {
       
       if (!isPaused && !showInstructions) {
         const currentTime = clock.getElapsedTime() * 1000;
-        if (currentTime - lastCarrotSpawn > carrotSpawnRate) {
+        
+        // Only spawn new carrots if we need more and it's time
+        if (carrots.length < 8 && currentTime - lastCarrotSpawn > carrotSpawnRate) {
           spawnCarrot();
         }
-        if (currentTime - lastObstacleSpawn > obstacleSpawnRate) {
-          spawnObstacle();
-        }
+        
         updatePlayer(deltaTime);
         updateBounce(deltaTime);
         checkCollisions();
+        updateTimer(deltaTime);
       } else {
         updateBounce(deltaTime); // Keep bounce settling when paused
       }
@@ -782,7 +859,7 @@ function createGameInstance() {
     clock = null;
     player = null;
     carrots = [];
-    obstacles = [];
+    hole = null;
     ground = null;
     canvas = null;
     gameContainer = null;
@@ -816,12 +893,32 @@ function createGameInstance() {
     }
   }
   
+  function setCarrotsCollected(newCarrotsCollected) {
+    carrotsCollected = newCarrotsCollected;
+    if (callbacks.onCarrotsChange) {
+      callbacks.onCarrotsChange(carrotsCollected);
+    }
+  }
+  
+  function setGameWon(newGameWon) {
+    gameWon = newGameWon;
+    if (callbacks.onGameWonChange) {
+      callbacks.onGameWonChange(gameWon);
+    }
+  }
+  
   return {
     init,
     start,
     togglePause,
     reset,
     toggleFullscreen,
-    destroy
+    destroy,
+    getGameState: () => ({
+      timeRemaining: Math.ceil(timeRemaining),
+      carrotsCollected,
+      carrotsNeeded,
+      gameWon
+    })
   };
 }

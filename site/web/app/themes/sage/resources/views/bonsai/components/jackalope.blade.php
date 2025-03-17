@@ -29,8 +29,16 @@
     <canvas x-ref="gameCanvas" class="w-full h-full"></canvas>
     
     <div class="absolute bottom-4 left-4 right-4 flex justify-between">
-        <div class="bg-black/50 text-white px-3 py-1 rounded-md">
-            <span x-text="score">0</span> points
+        <div class="bg-black/50 text-white px-3 py-1 rounded-md flex gap-3">
+            <div>
+                <span x-text="score">0</span> points
+            </div>
+            <div>
+                Carrots: <span x-text="carrotsCollected || 0">0</span>/<span x-text="5">5</span>
+            </div>
+            <div>
+                Time: <span x-text="timeRemaining || 20">20</span>s
+            </div>
         </div>
         <div class="flex gap-2">
             <button @click="toggleFullscreen" 
@@ -52,13 +60,26 @@
     <div x-show="showInstructions" 
          class="absolute inset-0 bg-black/80 flex flex-col items-center justify-center text-white p-6 text-center">
         <h3 class="text-2xl font-bold mb-4">Jackalope Game</h3>
-        <p class="mb-6">Help the jackalope collect carrots while avoiding obstacles!</p>
+        
+        <template x-if="gameOver && gameWon">
+            <div class="mb-6 text-green-400 text-xl">
+                <p>You won! Great job!</p>
+            </div>
+        </template>
+        
+        <template x-if="gameOver && !gameWon">
+            <div class="mb-6 text-red-400 text-xl">
+                <p>Time's up! Try again!</p>
+            </div>
+        </template>
+        
+        <p class="mb-6">Collect 5 carrots and return to the hole within 20 seconds!</p>
         <ul class="mb-6 text-left">
             <li class="mb-2">• Use <strong>arrow keys</strong> or <strong>WASD</strong> to move</li>
             <li class="mb-2">• Press <strong>spacebar</strong> to jump</li>
             <li class="mb-2">• Press <strong>F</strong> to toggle fullscreen</li>
-            <li class="mb-2">• Collect carrots for points</li>
-            <li class="mb-2">• Avoid obstacles</li>
+            <li class="mb-2">• Collect 5 carrots then jump into the hole</li>
+            <li class="mb-2">• You have 20 seconds to complete the mission</li>
         </ul>
         <button @click="startGame" 
                 class="bg-white text-black px-6 py-2 rounded-md hover:bg-gray-200 transition-colors">
