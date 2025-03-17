@@ -475,14 +475,14 @@ function createGameInstance() {
         const platformData = platform.userData;
         
         // Calculate platform boundaries
-        const halfWidth = platformData.width / 2 - 0.2;
-        const halfDepth = platformData.depth / 2 - 0.2;
+        const halfWidth = platformData.width / 2;
+        const halfDepth = platformData.depth / 2;
         const platformTop = platformPos.y + platformData.height / 2;
         
         // Check if player is on this platform
-        if (Math.abs(playerPos.x - platformPos.x) < halfWidth && 
-            Math.abs(playerPos.z - platformPos.z) < halfDepth &&
-            Math.abs(playerPos.y - (platformTop + 0.8)) < 0.1) {
+        if (Math.abs(playerPos.x - platformPos.x) < halfWidth + 0.3 && 
+            Math.abs(playerPos.z - platformPos.z) < halfDepth + 0.3 &&
+            Math.abs(playerPos.y - (platformTop + 0.8)) < 0.2) {
           canJump = true;
           break;
         }
@@ -656,13 +656,100 @@ function createGameInstance() {
       const normalizedDelta = Math.min(deltaTime, 33); // Cap delta at 33ms (30fps) to prevent huge jumps
       const speed = playerSpeed * normalizedDelta;
       
-      player.position.x += Math.sin(angle) * speed;
-      player.position.z += Math.cos(angle) * speed;
+      // Calculate potential new position
+      const newX = player.position.x + Math.sin(angle) * speed;
+      const newZ = player.position.z + Math.cos(angle) * speed;
+      
+      // Apply movement directly - we'll handle collisions differently
+      player.position.x = newX;
+      player.position.z = newZ;
       
       // Keep player within bounds - smaller boundary for better gameplay
       const boundaryLimit = 20;
       player.position.x = Math.max(-boundaryLimit, Math.min(boundaryLimit, player.position.x));
       player.position.z = Math.max(-boundaryLimit, Math.min(boundaryLimit, player.position.z));
+      
+      // Check for platform side collisions after movement
+      handlePlatformCollisions();
+    }
+  }
+  
+  function handlePlatformCollisions() {
+    // Player collision radius
+    const playerRadius = 0.5;
+    
+    // Get player's feet position
+    const playerFeetY = player.position.y - 0.8;
+    
+    // Check if player is standing on any platform
+    let standingOnPlatform = false;
+    let standingPlatformIndex = -1;
+    
+    for (let i = 0; i < platforms.length; i++) {
+      const platform = platforms[i];
+      const platformPos = platform.position.clone();
+      const platformData = platform.userData;
+      
+      // Calculate platform boundaries
+      const halfWidth = platformData.width / 2;
+      const halfDepth = platformData.depth / 2;
+      const platformTop = platformPos.y + platformData.height / 2;
+      
+      // Check if player is standing on this platform
+      if (Math.abs(playerFeetY - platformTop) < 0.3 && 
+          Math.abs(player.position.x - platformPos.x) < halfWidth + 0.3 && 
+          Math.abs(player.position.z - platformPos.z) < halfDepth + 0.3) {
+        standingOnPlatform = true;
+        standingPlatformIndex = i;
+        break;
+      }
+    }
+    
+    // If standing on a platform, we don't need to check for side collisions
+    if (standingOnPlatform) {
+      return;
+    }
+    
+    // Check for side collisions with all platforms
+    for (let i = 0; i < platforms.length; i++) {
+      const platform = platforms[i];
+      const platformPos = platform.position.clone();
+      const platformData = platform.userData;
+      
+      // Calculate platform boundaries
+      const halfWidth = platformData.width / 2;
+      const halfDepth = platformData.depth / 2;
+      const platformHeight = platformData.height;
+      const platformBottom = platformPos.y - platformHeight / 2;
+      const platformTop = platformPos.y + platformData.height / 2;
+      
+      // Only check for side collisions if player is within the height range of the platform
+      if (player.position.y < platformTop + 1.0 && 
+          player.position.y > platformBottom - 0.5) {
+        
+        // Calculate horizontal distance to platform center
+        const dx = player.position.x - platformPos.x;
+        const dz = player.position.z - platformPos.z;
+        const horizontalDistance = Math.sqrt(dx * dx + dz * dz);
+        
+        // Calculate the closest point on the platform's perimeter
+        const closestX = Math.max(-halfWidth, Math.min(halfWidth, dx));
+        const closestZ = Math.max(-halfDepth, Math.min(halfDepth, dz));
+        
+        // If player is inside the platform, push them out
+        if (Math.abs(dx) < halfWidth + playerRadius && 
+            Math.abs(dz) < halfDepth + playerRadius) {
+          
+          // Determine which side is closest to push the player out
+          if (Math.abs(dx) / halfWidth > Math.abs(dz) / halfDepth) {
+            // Push out along X axis
+            player.position.x = platformPos.x + (dx > 0 ? 1 : -1) * (halfWidth + playerRadius);
+          } else {
+            // Push out along Z axis
+            player.position.z = platformPos.z + (dz > 0 ? 1 : -1) * (halfDepth + playerRadius);
+          }
+        }
+      }
     }
   }
   
@@ -688,9 +775,6 @@ function createGameInstance() {
     let onPlatform = false;
     let platformHeight = 0;
     
-    // Debug - log player position
-    console.log(`Player position: x=${playerPos.x.toFixed(2)}, y=${playerPos.y.toFixed(2)}, z=${playerPos.z.toFixed(2)}, velocityY=${velocityY.toFixed(3)}`);
-    
     // Check if player is on a platform
     for (let i = 0; i < platforms.length; i++) {
       const platform = platforms[i];
@@ -702,22 +786,9 @@ function createGameInstance() {
       const halfDepth = platformData.depth / 2;
       const platformTop = platformPos.y + platformData.height / 2;
       
-      // Debug - log platform info when player is nearby
-      const distanceXZ = Math.sqrt(
-        Math.pow(playerPos.x - platformPos.x, 2) + 
-        Math.pow(playerPos.z - platformPos.z, 2)
-      );
-      
-      if (distanceXZ < 5) {
-        console.log(`Platform ${i}: x=${platformPos.x.toFixed(2)}, y=${platformPos.y.toFixed(2)}, z=${platformPos.z.toFixed(2)}, top=${platformTop.toFixed(2)}, w=${platformData.width.toFixed(2)}, d=${platformData.depth.toFixed(2)}`);
-      }
-      
       // Check if player is above the platform (using a slightly larger collision box)
       if (Math.abs(playerPos.x - platformPos.x) < halfWidth + 0.3 && 
           Math.abs(playerPos.z - platformPos.z) < halfDepth + 0.3) {
-        
-        // Debug - log when player is above platform
-        console.log(`Player above platform ${i}, previousY=${previousY.toFixed(2)}, newY=${newPositionY.toFixed(2)}, platformTop=${platformTop.toFixed(2)}`);
         
         // Check if player is landing on the platform (coming from above)
         // Use a more generous collision detection
@@ -725,7 +796,6 @@ function createGameInstance() {
             (newPositionY + 0.8) <= platformTop + 0.2 && 
             velocityY < 0) { // Only detect when moving downward
           
-          console.log(`LANDING on platform ${i}!`);
           onPlatform = true;
           platformHeight = platformTop - 0.8; // Adjust to stand on top
           break;
