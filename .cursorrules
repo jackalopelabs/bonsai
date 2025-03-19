@@ -54,8 +54,8 @@ If we're not using Radicle, and the project is empty (other than this file)– t
 - Install Sage 11: `cd site/web/app/themes && composer create-project roots/sage`
 - Build theme assets: `cd sage && npm install && npm run build`
 – Install alpine.js `npm install alpinejs --save`
-- From Trellis, install Ansible Galaxy roles: `cd ../../../../../trellis && trellis galaxy install` or `ansible-galaxy install -f -r galaxy.yml` (Make sure you verify this is installed before moving on)
-- Manually create the virtual environment and install Ansible `rm -rf .trellis/virtualenv && mkdir -p .trellis/virtualenv && python3 -m venv .trellis/virtualenv && .trellis/virtualenv/bin/pip install ansible`
+- From Trellis, manually create the virtual environment and install Ansible `rm -rf .trellis/virtualenv && mkdir -p .trellis/virtualenv && python3 -m venv .trellis/virtualenv && .trellis/virtualenv/bin/pip install ansible`
+- Trellis init: `trellis init`
 - Start Lima VM (which will provision development): `trellis vm start` (Make sure this completes before moving on)
 - Align Lima VM with /etc/hosts and SSH Config (instructions below)
 - Configure `site/wp-cli.yml` to use the @development, @staging, and @production aliases
