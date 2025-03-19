@@ -19,7 +19,7 @@ Before getting started, make sure that Trellis CLI is installed: `trellis --vers
 
 Before you do anything, you will need to look at the project structure to determine if we are using the Roots open-source stack (Sage 11, Bedrock, and Trellis), or whether we're using Radicle, their paid project which combines all of those into a single cleaner project structure.
 
-If we're using the open-source Roots stack, you will see a completely empty project other than a .cursorrules file. 
+If we're using the open-source Roots stack, you will see a completely empty project other than this .cursorrules file, .gitignore, LICENSE, and README.md. 
 
 If we're using Radicle, the project will look like this:
 |–– bedrock
@@ -57,9 +57,11 @@ If we're not using Radicle, and the project is empty (other than this file)– t
 - From Trellis, manually create the virtual environment and install Ansible `rm -rf .trellis/virtualenv && mkdir -p .trellis/virtualenv && python3 -m venv .trellis/virtualenv && .trellis/virtualenv/bin/pip install ansible`
 - Trellis init: `trellis init`
 - Start Lima VM (which will provision development): `trellis vm start` (Make sure this completes before moving on)
-- Align Lima VM with /etc/hosts and SSH Config (instructions below)
-- Configure `site/wp-cli.yml` to use the @development, @staging, and @production aliases
+- Connect to development server: `trellis vm shell`
+– Run: `ssh-keygen -R [sitename-tld.test]`
 - Run: `ssh [sitename-tld.test]` to test whether we can connect to our Lima vm
+- If that ssh connection worked, then move onto configuring `wp-cli.yml`. If not, then you need to align the Lima VM with /etc/hosts and SSH Config (instructions below)
+- Configure `site/wp-cli.yml` to use the @development, @staging, and @production aliases
 - Activate Sage 11: `wp @development theme activate sage` (make sure this completes before moving on, run it /site directory, not project root. Do not proceed to the next step until this completes successfully. If you get `Error: Alias '@development' not found.` then you should go back to the previous step of aligning lima vm `/etc/hosts` and `.ssh/config`)
 - Go to the `site` directory and config Bonsai CLI: `composer config repositories.bonsai-cli vcs git@github.com:jackalopelabs/bonsai-cli.git`
 - Now require it: `composer require jackalopelabs/bonsai-cli:dev-kanban`
