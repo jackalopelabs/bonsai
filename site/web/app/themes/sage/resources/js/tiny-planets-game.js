@@ -140,26 +140,33 @@ export default function tinyPlanetsGame() {
       let rotationAxis = new THREE.Vector3();
       let rabbitForward = new THREE.Vector3();
       
+      // Track if there's movement this frame
+      let isMoving = false;
+      
       // Determine movement direction based on keys pressed
       if (keys['w'] || keys['arrowup']) {
         // Forward
         rotationAxis.add(cameraRight.clone().multiplyScalar(-1));
         rabbitForward.copy(cameraForward.clone().negate());
+        isMoving = true;
       }
       if (keys['s'] || keys['arrowdown']) {
         // Backward
         rotationAxis.add(cameraRight.clone());
         rabbitForward.copy(cameraForward);
+        isMoving = true;
       }
       if (keys['a'] || keys['arrowleft']) {
         // Left
         rotationAxis.add(cameraForward.clone().negate());
         rabbitForward.copy(cameraRight);
+        isMoving = true;
       }
       if (keys['d'] || keys['arrowright']) {
         // Right
         rotationAxis.add(cameraForward.clone());
-        rabbitForward.copy(cameraRight).negate();
+        rabbitForward.copy(cameraRight.clone().negate());
+        isMoving = true;
       }
       
       // Apply movement if key is pressed
@@ -194,7 +201,90 @@ export default function tinyPlanetsGame() {
           // Smoothly interpolate rotation for more natural movement
           rabbit.quaternion.slerp(targetRotation, 0.15);
         }
+        
+        // Apply hopping animation
+        this.animateHopping();
+      } else {
+        // Reset to normal pose if not moving
+        this.resetRabbitPose();
       }
+    },
+    
+    // Animation time for continuous hopping
+    hopAnimationTime: 0,
+    
+    animateHopping() {
+      // Update animation time
+      this.hopAnimationTime += 0.15;
+      
+      // Get body parts
+      const body = rabbit.getObjectByName("body");
+      const head = rabbit.getObjectByName("head");
+      const leftEar = rabbit.getObjectByName("leftEar");
+      const rightEar = rabbit.getObjectByName("rightEar");
+      const leftFrontFoot = rabbit.getObjectByName("leftFrontFoot");
+      const rightFrontFoot = rabbit.getObjectByName("rightFrontFoot");
+      const leftBackFoot = rabbit.getObjectByName("leftBackFoot");
+      const rightBackFoot = rabbit.getObjectByName("rightBackFoot");
+      const tail = rabbit.getObjectByName("tail");
+      
+      if (!body || !head || !leftEar || !rightEar || !leftFrontFoot || 
+          !rightFrontFoot || !leftBackFoot || !rightBackFoot || !tail) {
+        return;
+      }
+      
+      // Calculate hop phase based on sine wave
+      const hopCycle = Math.sin(this.hopAnimationTime);
+      const hopHeight = Math.max(0, hopCycle) * 0.1;
+      
+      // Apply small vertical hop motion to whole rabbit
+      const upVector = rabbit.position.clone().normalize();
+      const originalPosition = rabbit.position.clone();
+      rabbit.position.copy(originalPosition.clone().add(upVector.multiplyScalar(hopHeight)));
+      
+      // Animate limbs for running effect
+      const legCycle = Math.sin(this.hopAnimationTime * 2);
+      
+      // Front legs alternate
+      leftFrontFoot.position.y = -0.2 * 0.4 + Math.max(0, legCycle) * 0.1;
+      rightFrontFoot.position.y = -0.2 * 0.4 + Math.max(0, -legCycle) * 0.1;
+      
+      // Back legs provide the hop
+      leftBackFoot.position.y = -0.2 * 0.4 + Math.max(0, hopCycle) * 0.15;
+      rightBackFoot.position.y = -0.2 * 0.4 + Math.max(0, hopCycle) * 0.15;
+      
+      // Ears and tail have subtle movement
+      leftEar.rotation.z = Math.PI / 12 + legCycle * 0.05;
+      rightEar.rotation.z = -Math.PI / 12 - legCycle * 0.05;
+      tail.rotation.x = legCycle * 0.1;
+    },
+    
+    resetRabbitPose() {
+      // Get body parts
+      const body = rabbit?.getObjectByName("body");
+      const head = rabbit?.getObjectByName("head");
+      const leftEar = rabbit?.getObjectByName("leftEar");
+      const rightEar = rabbit?.getObjectByName("rightEar");
+      const leftFrontFoot = rabbit?.getObjectByName("leftFrontFoot");
+      const rightFrontFoot = rabbit?.getObjectByName("rightFrontFoot");
+      const leftBackFoot = rabbit?.getObjectByName("leftBackFoot");
+      const rightBackFoot = rabbit?.getObjectByName("rightBackFoot");
+      const tail = rabbit?.getObjectByName("tail");
+      
+      if (!body || !head || !leftEar || !rightEar || !leftFrontFoot || 
+          !rightFrontFoot || !leftBackFoot || !rightBackFoot || !tail) {
+        return;
+      }
+      
+      // Reset to default positions
+      leftFrontFoot.position.y = -0.2 * 0.4;
+      rightFrontFoot.position.y = -0.2 * 0.4;
+      leftBackFoot.position.y = -0.2 * 0.4;
+      rightBackFoot.position.y = -0.2 * 0.4;
+      
+      leftEar.rotation.z = Math.PI / 12;
+      rightEar.rotation.z = -Math.PI / 12;
+      tail.rotation.x = 0;
     },
     
     jump() {
@@ -244,16 +334,19 @@ export default function tinyPlanetsGame() {
     },
     
     createPlanet() {
-      // Create simple planet geometry
-      const geometry = new THREE.SphereGeometry(4, 32, 32);
+      // Create simple planet geometry with higher detail
+      const geometry = new THREE.SphereGeometry(4, 64, 64);
       
-      // Create noise-based material
+      // Create more colorful material for better visibility
       const material = new THREE.MeshStandardMaterial({
-        color: 0x44aa44,
-        roughness: 0.8,
+        color: 0x66aa44,
+        roughness: 0.7,
+        metalness: 0.1,
+        flatShading: false,
+        vertexColors: false,
       });
       
-      // Apply noise to vertices for terrain
+      // Apply noise to vertices for terrain with higher amplitude
       const positions = geometry.attributes.position;
       const noise = new SimplexNoise();
       
@@ -265,15 +358,20 @@ export default function tinyPlanetsGame() {
         const vertex = new THREE.Vector3(x, y, z);
         const direction = vertex.normalize();
         
-        // Generate noise-based height
-        const elevation = noise.noise3d(
-          direction.x * 2, 
-          direction.y * 2, 
-          direction.z * 2
-        ) * 0.2;
+        // Generate more pronounced noise-based height with multiple frequencies
+        let elevation = 0;
         
-        // Apply height to vertex
-        vertex.add(direction.multiplyScalar(elevation));
+        // Large features
+        elevation += noise.noise3d(direction.x * 2, direction.y * 2, direction.z * 2) * 0.2;
+        
+        // Medium features
+        elevation += noise.noise3d(direction.x * 4, direction.y * 4, direction.z * 4) * 0.1;
+        
+        // Small features
+        elevation += noise.noise3d(direction.x * 8, direction.y * 8, direction.z * 8) * 0.05;
+        
+        // Apply height to vertex with increased amplitude (0.3 vs 0.2)
+        vertex.add(direction.multiplyScalar(elevation * 0.3));
         
         positions.setXYZ(i, vertex.x, vertex.y, vertex.z);
       }
@@ -284,7 +382,63 @@ export default function tinyPlanetsGame() {
       planet = new THREE.Mesh(geometry, material);
       planet.castShadow = true;
       planet.receiveShadow = true;
+      
+      // Add a water layer for better visibility
+      this.createWater(planet);
+      
       scene.add(planet);
+    },
+    
+    createWater(planet) {
+      // Create water layer at radius slightly larger than planet
+      const waterGeometry = new THREE.SphereGeometry(4.05, 48, 48);
+      
+      // Blue water material with transparency
+      const waterMaterial = new THREE.MeshPhysicalMaterial({
+        color: 0x4488ff,
+        transparent: true,
+        opacity: 0.6,
+        roughness: 0.2,
+        metalness: 0.1,
+        clearcoat: 1,
+        clearcoatRoughness: 0.2,
+        transmission: 0.5,
+      });
+      
+      const water = new THREE.Mesh(waterGeometry, waterMaterial);
+      
+      // Only add water in specific areas using noise 
+      // to create continents and oceans
+      const waterPositions = waterGeometry.attributes.position;
+      const noise = new SimplexNoise();
+      
+      for (let i = 0; i < waterPositions.count; i++) {
+        const x = waterPositions.getX(i);
+        const y = waterPositions.getY(i);
+        const z = waterPositions.getZ(i);
+        
+        // Get normalized direction
+        const vertex = new THREE.Vector3(x, y, z);
+        const direction = vertex.normalize();
+        
+        // Use noise to determine if this area should have water
+        // Lower frequency noise for larger continent patterns
+        const waterNoise = noise.noise3d(
+          direction.x * 1.5, 
+          direction.y * 1.5, 
+          direction.z * 1.5
+        );
+        
+        // If noise value is above threshold, move vertex inward to hide water
+        if (waterNoise > 0.1) {
+          // Move vertex inward to hide water
+          vertex.multiplyScalar(0.98);
+          waterPositions.setXYZ(i, vertex.x, vertex.y, vertex.z);
+        }
+      }
+      
+      water.receiveShadow = true;
+      planet.add(water);
     },
     
     createRabbit() {
