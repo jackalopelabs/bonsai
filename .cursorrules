@@ -12,8 +12,10 @@ The [project_name] will be the name of our project.
 The [sitename] is your desired URL, and will be used in the wp-cli.yml config such as example.com.
 
 Provided [sitename] and [projectname]:
-[sitename]=`chosen.bonsai.so`
-[projectname]=`chosen`
+[sitename]=`bonsai.so`
+[projectname]=`bonsai`
+
+Before getting started, make sure that Trellis CLI is installed: `trellis --version`
 
 Before you do anything, you will need to look at the project structure to determine if we are using the Roots open-source stack (Sage 11, Bedrock, and Trellis), or whether we're using Radicle, their paid project which combines all of those into a single cleaner project structure.
 
