@@ -392,22 +392,77 @@ export default function tinyPlanetsGame() {
       animateJump();
     },
     
-    createPlanet() {
+    createPlanet(type = 'random') {
+      // Remove existing planet if any
+      if (planet) {
+        scene.remove(planet);
+      }
+      
+      console.log('Creating planet type:', type);
+      
+      // Create planet parameters based on type
+      let terrainColor, waterColor, mountainHeight, waterLevel, detailLevel;
+      
+      switch(type) {
+        case 'beach':
+          terrainColor = new THREE.Color(0xe0cb9e); // Sandy color
+          waterColor = new THREE.Color(0x4fa4de);   // Light blue
+          mountainHeight = 0.15;                    // Lower mountains
+          waterLevel = 0.10;                        // More water
+          detailLevel = 0.8;                        // Less detail
+          break;
+          
+        case 'forest':
+          terrainColor = new THREE.Color(0x448844); // Deep green
+          waterColor = new THREE.Color(0x3e87b3);   // Darker blue
+          mountainHeight = 0.25;                    // Medium mountains
+          waterLevel = -0.15;                       // Less water
+          detailLevel = 1.0;                        // Normal detail
+          break;
+          
+        case 'snow':
+          terrainColor = new THREE.Color(0xd8e3e9); // Snow white with blue tint
+          waterColor = new THREE.Color(0x3074a0);   // Deep blue
+          mountainHeight = 0.35;                    // Higher mountains
+          waterLevel = -0.05;                       // Medium water
+          detailLevel = 1.2;                        // More detail
+          break;
+          
+        case 'random':
+        default:
+          // Random terrain colors from green to brown
+          const hue = 0.2 + Math.random() * 0.15; // Green to yellow-brown
+          const saturation = 0.4 + Math.random() * 0.3;
+          const lightness = 0.4 + Math.random() * 0.2;
+          terrainColor = new THREE.Color().setHSL(hue, saturation, lightness);
+          
+          // Random water color (blue to green-blue)
+          const waterHue = 0.5 + Math.random() * 0.2;
+          waterColor = new THREE.Color().setHSL(waterHue, 0.65, 0.5);
+          
+          mountainHeight = 0.15 + Math.random() * 0.25;
+          waterLevel = -0.2 + Math.random() * 0.25;
+          detailLevel = 0.8 + Math.random() * 0.4;
+          break;
+      }
+      
       // Create simple planet geometry with higher detail
       const geometry = new THREE.SphereGeometry(4, 64, 64);
       
-      // Create more colorful material for better visibility
+      // Create material with vertex colors for better terrain visualization
       const material = new THREE.MeshStandardMaterial({
-        color: 0x66aa44,
+        vertexColors: true,
         roughness: 0.7,
         metalness: 0.1,
-        flatShading: false,
-        vertexColors: false,
+        flatShading: false
       });
       
-      // Apply noise to vertices for terrain with higher amplitude
+      // Apply noise to vertices for terrain with multiple frequencies
       const positions = geometry.attributes.position;
       const noise = new SimplexNoise();
+      
+      // Create color array for vertex coloring
+      const colors = new Float32Array(positions.count * 3);
       
       for (let i = 0; i < positions.count; i++) {
         const x = positions.getX(i);
@@ -417,24 +472,125 @@ export default function tinyPlanetsGame() {
         const vertex = new THREE.Vector3(x, y, z);
         const direction = vertex.normalize();
         
-        // Generate more pronounced noise-based height with multiple frequencies
-        let elevation = 0;
+        // Generate noise at different frequencies
+        // Large features - continents and oceans
+        const largeNoise = noise.noise3d(
+          direction.x * 1.5, 
+          direction.y * 1.5, 
+          direction.z * 1.5
+        ) * 0.2;
         
-        // Large features
-        elevation += noise.noise3d(direction.x * 2, direction.y * 2, direction.z * 2) * 0.2;
+        // Medium features - mountains and valleys
+        const mediumNoise = noise.noise3d(
+          direction.x * 3, 
+          direction.y * 3, 
+          direction.z * 3
+        ) * 0.1;
         
-        // Medium features
-        elevation += noise.noise3d(direction.x * 4, direction.y * 4, direction.z * 4) * 0.1;
+        // Small features - hills and bumps
+        const smallNoise = noise.noise3d(
+          direction.x * 6, 
+          direction.y * 6, 
+          direction.z * 6
+        ) * 0.05;
         
-        // Small features
-        elevation += noise.noise3d(direction.x * 8, direction.y * 8, direction.z * 8) * 0.05;
+        // Micro details for close-up viewing
+        const microNoise = noise.noise3d(
+          direction.x * 12, 
+          direction.y * 12, 
+          direction.z * 12
+        ) * 0.025;
         
-        // Apply height to vertex with increased amplitude (0.3 vs 0.2)
-        vertex.add(direction.multiplyScalar(elevation * 0.3));
+        // Combine noise at different detail levels
+        let elevation = largeNoise * 1.0 + 
+                       mediumNoise * detailLevel + 
+                       smallNoise * detailLevel + 
+                       microNoise * detailLevel;
         
+        // Add more dramatic mountains for snow planets
+        if (type === 'snow') {
+          const mountainNoise = Math.pow(Math.abs(largeNoise), 1.5) * 0.3;
+          elevation += mountainNoise;
+        }
+        
+        // Beach planets get smoother shorelines
+        if (type === 'beach') {
+          // Smooth transition at shoreline
+          if (elevation > -0.05 && elevation < 0.1) {
+            elevation = 0.05 * Math.sin((elevation + 0.05) * Math.PI * 5);
+          }
+        }
+        
+        // Scale by mountain height factor
+        elevation *= mountainHeight;
+        
+        // Apply height to vertex
+        vertex.add(direction.multiplyScalar(elevation));
         positions.setXYZ(i, vertex.x, vertex.y, vertex.z);
+        
+        // Determine vertex color based on elevation and type
+        let vertexColor = new THREE.Color();
+        
+        // Water areas
+        if (elevation < waterLevel) {
+          // Deep ocean gets darker
+          const depth = Math.min(1, Math.abs(elevation - waterLevel) * 5);
+          vertexColor.copy(waterColor).multiplyScalar(1 - depth * 0.3);
+        } 
+        // Beach/shore areas
+        else if (elevation < waterLevel + 0.05) {
+          // Beach sand or snow
+          if (type === 'beach') {
+            vertexColor.setRGB(0.95, 0.90, 0.75); // Beach sand
+          } else if (type === 'snow') {
+            vertexColor.setRGB(0.95, 0.95, 0.97); // Snowy shore
+          } else {
+            // Blend from water to terrain color
+            const blend = (elevation - waterLevel) / 0.05;
+            vertexColor.copy(waterColor).lerp(terrainColor, blend);
+          }
+        }
+        // Normal terrain
+        else if (elevation < waterLevel + 0.3) {
+          // Main terrain color
+          vertexColor.copy(terrainColor);
+          
+          // Add some variation based on noise
+          const colorNoise = noise.noise3d(
+            direction.x * 10, 
+            direction.y * 10, 
+            direction.z * 10
+          ) * 0.1;
+          
+          // Adjust brightness with noise
+          vertexColor.offsetHSL(0, 0, colorNoise);
+        }
+        // Mountains/highlands
+        else {
+          if (type === 'snow') {
+            // Snow covered mountains
+            const snowAmount = Math.min(1, (elevation - (waterLevel + 0.3)) * 5);
+            vertexColor.copy(terrainColor).lerp(new THREE.Color(0xffffff), snowAmount);
+          } else if (type === 'forest') {
+            // Rocky mountains
+            const rockAmount = Math.min(1, (elevation - (waterLevel + 0.3)) * 5);
+            vertexColor.copy(terrainColor).lerp(new THREE.Color(0x666666), rockAmount);
+          } else {
+            // Generic mountains get darker with elevation
+            vertexColor.copy(terrainColor).multiplyScalar(0.8 + elevation * 0.5);
+          }
+        }
+        
+        // Set the vertex color
+        colors[i * 3] = vertexColor.r;
+        colors[i * 3 + 1] = vertexColor.g;
+        colors[i * 3 + 2] = vertexColor.b;
       }
       
+      // Add colors to geometry
+      geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      
+      // Update normals after deformation
       geometry.computeVertexNormals();
       
       // Create planet mesh
@@ -442,22 +598,37 @@ export default function tinyPlanetsGame() {
       planet.castShadow = true;
       planet.receiveShadow = true;
       
-      // Add a water layer for better visibility
-      this.createWater(planet);
+      // Create water layer (semi-transparent)
+      this.createWater(planet, waterColor, waterLevel);
+      
+      // Create atmosphere if not beach planet
+      if (type !== 'beach') {
+        this.createAtmosphere(planet, type);
+      }
+      
+      // Add vegetation based on planet type
+      this.addVegetation(planet, type, waterLevel);
       
       scene.add(planet);
+      
+      // Put rabbit back on top of planet after recreating
+      if (rabbit) {
+        // Position rabbit on top of planet
+        rabbit.position.set(0, 4.5, 0);
+      }
     },
     
-    createWater(planet) {
-      // Create water layer at radius slightly larger than planet
-      const waterGeometry = new THREE.SphereGeometry(4.05, 48, 48);
+    createWater(planet, waterColor, waterLevel) {
+      // Create water sphere
+      const waterRadius = 4.1 + (waterLevel * 0.3); // Adjust radius based on water level
+      const waterGeometry = new THREE.SphereGeometry(waterRadius, 48, 48);
       
-      // Blue water material with transparency
+      // Create transparent water material
       const waterMaterial = new THREE.MeshPhysicalMaterial({
-        color: 0x4488ff,
+        color: waterColor,
         transparent: true,
         opacity: 0.6,
-        roughness: 0.2,
+        roughness: 0.1,
         metalness: 0.1,
         clearcoat: 1,
         clearcoatRoughness: 0.2,
@@ -465,6 +636,7 @@ export default function tinyPlanetsGame() {
       });
       
       const water = new THREE.Mesh(waterGeometry, waterMaterial);
+      water.receiveShadow = true;
       
       // Only add water in specific areas using noise 
       // to create continents and oceans
@@ -491,13 +663,150 @@ export default function tinyPlanetsGame() {
         // If noise value is above threshold, move vertex inward to hide water
         if (waterNoise > 0.1) {
           // Move vertex inward to hide water
-          vertex.multiplyScalar(0.98);
+          vertex.multiplyScalar(0.97);
           waterPositions.setXYZ(i, vertex.x, vertex.y, vertex.z);
         }
       }
       
-      water.receiveShadow = true;
+      // Store water for animation
+      this.water = water;
+      this.waterBaseRadius = waterRadius;
+      this.waterTime = 0;
+      
       planet.add(water);
+    },
+    
+    createAtmosphere(planet, type) {
+      // Create atmosphere glow
+      const atmosphereGeometry = new THREE.SphereGeometry(4.3, 32, 32);
+      
+      // Different atmosphere colors based on planet type
+      let atmosphereColor;
+      let atmosphereOpacity;
+      
+      switch (type) {
+        case 'snow':
+          atmosphereColor = new THREE.Color(0x8cb5e8); // Blue-white
+          atmosphereOpacity = 0.15;
+          break;
+        case 'forest':
+          atmosphereColor = new THREE.Color(0x6bbba9); // Green-blue
+          atmosphereOpacity = 0.12;
+          break;
+        default:
+          atmosphereColor = new THREE.Color(0x8d95c9); // Light purple
+          atmosphereOpacity = 0.1;
+      }
+      
+      const atmosphereMaterial = new THREE.MeshLambertMaterial({
+        color: atmosphereColor,
+        transparent: true,
+        opacity: atmosphereOpacity,
+        side: THREE.BackSide,
+      });
+      
+      const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+      planet.add(atmosphere);
+      this.atmosphere = atmosphere;
+    },
+    
+    addVegetation(planet, type, waterLevel) {
+      // Exit early if not forest or snow planet
+      if (type !== 'forest' && type !== 'snow') return;
+      
+      // Create tree instances based on type
+      const treeCount = type === 'forest' ? 80 : 40;
+      const treeGeometry = new THREE.ConeGeometry(0.1, 0.4, 6);
+      const trunkGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.2, 5);
+      
+      // Different colors for different planet types
+      const treeColor = type === 'forest' 
+                       ? new THREE.Color(0x2d5d39) // Dark green
+                       : new THREE.Color(0x386b48); // Blue-green for snow planet
+                       
+      const trunkColor = type === 'forest'
+                        ? new THREE.Color(0x714a23) // Brown
+                        : new THREE.Color(0x4d3217); // Dark brown
+                        
+      const treeMaterial = new THREE.MeshStandardMaterial({ color: treeColor });
+      const trunkMaterial = new THREE.MeshStandardMaterial({ color: trunkColor });
+      
+      // Create trees randomly placed on the planet
+      const noise = new SimplexNoise();
+      
+      for (let i = 0; i < treeCount; i++) {
+        // Random position on sphere
+        const phi = Math.random() * Math.PI * 2;
+        const theta = Math.random() * Math.PI;
+        
+        // Convert to cartesian coordinates
+        const x = Math.sin(theta) * Math.cos(phi);
+        const y = Math.sin(theta) * Math.sin(phi);
+        const z = Math.cos(theta);
+        
+        // Check if tree is above water level
+        const pos = new THREE.Vector3(x, y, z);
+        const elevation = noise.noise3d(pos.x * 1.5, pos.y * 1.5, pos.z * 1.5) * 0.2;
+        
+        if (elevation > waterLevel + 0.1) {
+          // Create tree group
+          const tree = new THREE.Group();
+          
+          // Create trunk
+          const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+          trunk.castShadow = true;
+          trunk.position.y = 0.1;
+          tree.add(trunk);
+          
+          // Create foliage
+          const foliage = new THREE.Mesh(treeGeometry, treeMaterial);
+          foliage.position.y = 0.3;
+          foliage.castShadow = true;
+          tree.add(foliage);
+          
+          // Snow cap for snow planet trees
+          if (type === 'snow') {
+            const snowCapGeometry = new THREE.ConeGeometry(0.08, 0.1, 6);
+            const snowMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
+            const snowCap = new THREE.Mesh(snowCapGeometry, snowMaterial);
+            snowCap.position.y = 0.4;
+            snowCap.castShadow = true;
+            tree.add(snowCap);
+          }
+          
+          // Position and orient the tree on the planet
+          const radius = 4.1 + (elevation * 0.2);
+          pos.normalize().multiplyScalar(radius);
+          tree.position.copy(pos);
+          
+          // Orient tree to planet surface
+          const up = pos.clone().normalize();
+          tree.up.copy(up);
+          
+          // Look at planet center from tree position
+          const target = new THREE.Vector3(0, 0, 0);
+          const matrix = new THREE.Matrix4().lookAt(pos, target, new THREE.Vector3(0, 1, 0));
+          const quaternion = new THREE.Quaternion().setFromRotationMatrix(matrix);
+          tree.quaternion.copy(quaternion);
+          
+          // Add tree to planet
+          planet.add(tree);
+        }
+      }
+    },
+    
+    // Method to change planet type
+    setPlanetType(type) {
+      // Valid planet types
+      const validTypes = ['beach', 'forest', 'snow', 'random'];
+      
+      // Validate planet type
+      if (!validTypes.includes(type)) {
+        type = 'random';
+      }
+      
+      // Create new planet
+      this.createPlanet(type);
     },
     
     createRabbit() {

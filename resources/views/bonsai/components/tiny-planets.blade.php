@@ -56,6 +56,35 @@
         max-width: 300px;
         z-index: 10;
     }
+    
+    /* Planet type controls */
+    .planet-controls {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        color: white;
+        padding: 10px;
+        background-color: rgba(0,0,0,0.5);
+        border-radius: 5px;
+        z-index: 10;
+    }
+    
+    .planet-controls button {
+        margin: 5px;
+        padding: 8px 16px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        display: block;
+        width: 100%;
+    }
+    
+    .planet-controls button:hover {
+        background-color: #45a049;
+    }
 </style>
 
 <div {{ $attributes->merge(['class' => 'tiny-planets-game-container relative w-full h-[500px] rounded-lg overflow-hidden shadow-lg ' . $class]) }}
@@ -74,7 +103,7 @@
         <p>Mouse Wheel: Zoom in/out (bunny will resize)</p>
         <p>R key: Toggle planet rotation</p>
         <p>F key: Toggle fullscreen</p>
-        <p><strong>Try:</strong> Zoom in very close for micro-movement!</p>
+        <p><strong>Try:</strong> Switch between different planet types!</p>
     </div>
     
     <!-- Simplified controls -->
@@ -102,11 +131,20 @@
             <li class="mb-2">• Scroll to zoom in and out (bunny size and speed will change)</li>
             <li class="mb-2">• Press <strong>R</strong> to toggle planet rotation</li>
             <li class="mb-2">• Press <strong>F</strong> for fullscreen</li>
-            <li class="mb-2">• Try the microscopic zoom level for extreme close-ups!</li>
+            <li class="mb-2">• Try different planet types: Beach, Forest, and Snow Forest!</li>
         </ul>
         <button @click="startGame" 
                 class="bg-white text-black px-6 py-2 rounded-md hover:bg-gray-200 transition-colors">
             Start
         </button>
+    </div>
+    
+    <!-- Planet type controls -->
+    <div class="planet-controls">
+        <h3 class="text-lg font-semibold mb-2">Planet Types</h3>
+        <button @click="setPlanetType('beach')">Beach Planet</button>
+        <button @click="setPlanetType('forest')">Forest Planet</button>
+        <button @click="setPlanetType('snow')">Snow Forest Planet</button>
+        <button @click="setPlanetType('random')">Random Planet</button>
     </div>
 </div> 
