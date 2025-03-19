@@ -29,7 +29,7 @@
             </div>
             
             <!-- Jackalope Game -->
-            <div>
+            {{-- <div>
                 <h3 class="text-2xl font-semibold mb-4 text-center">Jackalope Game</h3>
                 <x-bonsai::jackalope class="mb-8" />
                 
@@ -44,7 +44,7 @@
                         <li>Press <strong>ESC</strong> or <strong>P</strong> to pause the game</li>
                     </ul>
                 </div>
-            </div>
+            </div> --}}
         </div>
     </div>
 </section> 

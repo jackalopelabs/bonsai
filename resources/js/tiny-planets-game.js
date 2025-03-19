@@ -11,16 +11,13 @@ export default function tinyPlanetsGame() {
   let rabbit, planet;
   let isRotating = true;
   
-  // Keyboard controls
-  let keys = {};
-  let isJumping = false;
-  
   return {
     isFullscreen: false,
     isPaused: false,
     showInstructions: true,
     
     initGame() {
+      console.log('Initializing tiny planets game');
       this.setupScene(this.$refs.gameCanvas);
       
       // Handle fullscreen change
@@ -31,25 +28,17 @@ export default function tinyPlanetsGame() {
       
       // Handle key presses
       document.addEventListener('keydown', (e) => {
-        keys[e.key.toLowerCase()] = true;
-        
         if (e.key.toLowerCase() === 'r') {
           isRotating = !isRotating;
         }
         if (e.key.toLowerCase() === 'f') {
           this.toggleFullscreen();
         }
-        if (e.key === ' ' && !isJumping) {
-          this.jump();
-        }
-      });
-      
-      document.addEventListener('keyup', (e) => {
-        keys[e.key.toLowerCase()] = false;
       });
     },
     
     setupScene(canvas) {
+      console.log('Setting up scene with canvas', canvas);
       // Basic Three.js setup
       scene = new THREE.Scene();
       scene.background = new THREE.Color(0x000011);
@@ -90,7 +79,7 @@ export default function tinyPlanetsGame() {
       controls = new OrbitControls(camera, canvas);
       controls.enableDamping = true;
       controls.dampingFactor = 0.05;
-      controls.target.set(0, 4.5, 0); // Look at the rabbit position
+      controls.target.set(0, 1, 0); // Look at the rabbit
       
       // Handle window resize
       window.addEventListener('resize', this.onResize = () => {
@@ -104,9 +93,6 @@ export default function tinyPlanetsGame() {
         animationFrameId = requestAnimationFrame(animate);
         
         if (!this.isPaused) {
-          // Handle rabbit movement
-          this.updateRabbitMovement();
-          
           // Rotate planet
           if (isRotating && planet) {
             planet.rotation.y += 0.005;
@@ -120,130 +106,8 @@ export default function tinyPlanetsGame() {
       animate();
     },
     
-    updateRabbitMovement() {
-      if (!rabbit || !planet || isJumping) return;
-      
-      // Movement speed
-      const moveSpeed = 0.02;
-      
-      // Get camera relative directions for movement
-      const cameraDirection = new THREE.Vector3();
-      camera.getWorldDirection(cameraDirection);
-      cameraDirection.y = 0;
-      cameraDirection.normalize();
-      
-      // Calculate camera-relative direction vectors
-      const cameraForward = cameraDirection.clone();
-      const cameraRight = new THREE.Vector3().crossVectors(cameraForward, new THREE.Vector3(0, 1, 0)).normalize();
-      
-      // Init movement direction
-      let rotationAxis = new THREE.Vector3();
-      let rabbitForward = new THREE.Vector3();
-      
-      // Determine movement direction based on keys pressed
-      if (keys['w'] || keys['arrowup']) {
-        // Forward
-        rotationAxis.add(cameraRight.clone().multiplyScalar(-1));
-        rabbitForward.copy(cameraForward.clone().negate());
-      }
-      if (keys['s'] || keys['arrowdown']) {
-        // Backward
-        rotationAxis.add(cameraRight.clone());
-        rabbitForward.copy(cameraForward);
-      }
-      if (keys['a'] || keys['arrowleft']) {
-        // Left
-        rotationAxis.add(cameraForward.clone().negate());
-        rabbitForward.copy(cameraRight);
-      }
-      if (keys['d'] || keys['arrowright']) {
-        // Right
-        rotationAxis.add(cameraForward.clone());
-        rabbitForward.copy(cameraRight).negate();
-      }
-      
-      // Apply movement if key is pressed
-      if (rotationAxis.lengthSq() > 0) {
-        rotationAxis.normalize();
-        
-        // Rotate the planet (which effectively moves the rabbit in the opposite direction)
-        planet.rotateOnWorldAxis(rotationAxis, -moveSpeed);
-        
-        // Orient the rabbit to face the movement direction
-        if (rabbitForward.lengthSq() > 0) {
-          // Get the rabbit's up vector (direction from planet center to rabbit)
-          const rabbitUp = rabbit.position.clone().normalize();
-          
-          // Make sure rabbitForward is perpendicular to up vector
-          rabbitForward.sub(rabbitUp.clone().multiplyScalar(rabbitForward.dot(rabbitUp))).normalize();
-          
-          // Calculate right vector for proper orientation
-          const rabbitRight = new THREE.Vector3().crossVectors(rabbitForward, rabbitUp).normalize();
-          
-          // Recalculate forward to ensure orthogonality
-          rabbitForward.crossVectors(rabbitUp, rabbitRight).normalize();
-          
-          // Create rotation matrix
-          const rotMatrix = new THREE.Matrix4().makeBasis(
-            rabbitRight,
-            rabbitUp,
-            rabbitForward.clone().negate()
-          );
-          const targetRotation = new THREE.Quaternion().setFromRotationMatrix(rotMatrix);
-          
-          // Smoothly interpolate rotation for more natural movement
-          rabbit.quaternion.slerp(targetRotation, 0.15);
-        }
-      }
-    },
-    
-    jump() {
-      if (!rabbit || isJumping) return;
-      
-      isJumping = true;
-      
-      // Get the rabbit's current position and up vector
-      const startPosition = rabbit.position.clone();
-      const upVector = startPosition.clone().normalize();
-      
-      // Jump height and duration
-      const jumpHeight = 0.5;
-      const jumpDuration = 500; // ms
-      const startTime = Date.now();
-      
-      // Animation function for the jump
-      const animateJump = () => {
-        const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / jumpDuration, 1);
-        
-        // Parabolic jump curve - goes up and then back down
-        const jumpFactor = 4 * progress * (1 - progress);
-        
-        // Calculate new position
-        const newPosition = startPosition.clone().add(
-          upVector.clone().multiplyScalar(jumpHeight * jumpFactor)
-        );
-        
-        // Update rabbit position
-        rabbit.position.copy(newPosition);
-        
-        // Update camera target
-        controls.target.copy(rabbit.position);
-        
-        // Continue animation until complete
-        if (progress < 1) {
-          requestAnimationFrame(animateJump);
-        } else {
-          // Reset jump state
-          isJumping = false;
-        }
-      };
-      
-      // Start jump animation
-      animateJump();
-    },
-    
     createPlanet() {
+      console.log('Creating planet');
       // Create simple planet geometry
       const geometry = new THREE.SphereGeometry(4, 32, 32);
       
@@ -288,6 +152,7 @@ export default function tinyPlanetsGame() {
     },
     
     createRabbit() {
+      console.log('Creating rabbit');
       // Create a rabbit group
       rabbit = new THREE.Group();
       
@@ -352,22 +217,18 @@ export default function tinyPlanetsGame() {
       
       const leftFrontFoot = new THREE.Mesh(footGeometry, footMaterial);
       leftFrontFoot.position.set(-0.2, 0, 0.25);
-      leftFrontFoot.name = "leftFrontFoot";
       rabbit.add(leftFrontFoot);
       
       const rightFrontFoot = new THREE.Mesh(footGeometry, footMaterial);
       rightFrontFoot.position.set(0.2, 0, 0.25);
-      rightFrontFoot.name = "rightFrontFoot";
       rabbit.add(rightFrontFoot);
       
       const leftBackFoot = new THREE.Mesh(footGeometry, footMaterial);
       leftBackFoot.position.set(-0.2, 0, -0.25);
-      leftBackFoot.name = "leftBackFoot";
       rabbit.add(leftBackFoot);
       
       const rightBackFoot = new THREE.Mesh(footGeometry, footMaterial);
       rightBackFoot.position.set(0.2, 0, -0.25);
-      rightBackFoot.name = "rightBackFoot";
       rabbit.add(rightBackFoot);
       
       // Create tail (small white sphere)
@@ -375,7 +236,6 @@ export default function tinyPlanetsGame() {
       const tailMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff });
       const tail = new THREE.Mesh(tailGeometry, tailMaterial);
       tail.position.set(0, 0.4, -0.5);
-      tail.name = "tail";
       rabbit.add(tail);
       
       // Position rabbit on top of planet
@@ -399,6 +259,11 @@ export default function tinyPlanetsGame() {
     resetGame() {
       this.showInstructions = true;
       this.isPaused = true;
+    },
+    
+    setPlanetType(type) {
+      console.log('Planet type selected:', type);
+      // Just log for now - we'll keep it simple
     },
     
     toggleFullscreen() {
@@ -426,8 +291,6 @@ export default function tinyPlanetsGame() {
       
       window.removeEventListener('resize', this.onResize);
       document.removeEventListener('fullscreenchange', () => {});
-      document.removeEventListener('keydown', () => {});
-      document.removeEventListener('keyup', () => {});
       
       // Clean up Three.js resources
       if (renderer) {
