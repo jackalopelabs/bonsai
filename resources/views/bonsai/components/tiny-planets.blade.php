@@ -71,9 +71,10 @@
         <p>WASD or Arrow Keys: Move the bunny around</p>
         <p>Spacebar: Jump</p>
         <p>Mouse: Click and drag to rotate view</p>
-        <p>Mouse Wheel: Zoom in/out</p>
+        <p>Mouse Wheel: Zoom in/out (bunny will resize)</p>
         <p>R key: Toggle planet rotation</p>
         <p>F key: Toggle fullscreen</p>
+        <p><strong>Try:</strong> Zoom in very close for micro-movement!</p>
     </div>
     
     <!-- Simplified controls -->
@@ -98,9 +99,10 @@
             <li class="mb-2">• Use <strong>WASD</strong> or <strong>arrow keys</strong> to move the bunny</li>
             <li class="mb-2">• Press <strong>spacebar</strong> to jump</li>
             <li class="mb-2">• Click and drag to rotate the view</li>
-            <li class="mb-2">• Scroll to zoom in and out</li>
+            <li class="mb-2">• Scroll to zoom in and out (bunny size and speed will change)</li>
             <li class="mb-2">• Press <strong>R</strong> to toggle planet rotation</li>
             <li class="mb-2">• Press <strong>F</strong> for fullscreen</li>
+            <li class="mb-2">• Try the microscopic zoom level for extreme close-ups!</li>
         </ul>
         <button @click="startGame" 
                 class="bg-white text-black px-6 py-2 rounded-md hover:bg-gray-200 transition-colors">

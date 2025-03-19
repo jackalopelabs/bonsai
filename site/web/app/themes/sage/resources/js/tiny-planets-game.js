@@ -58,8 +58,8 @@ export default function tinyPlanetsGame() {
       camera = new THREE.PerspectiveCamera(
         70, 
         canvas.clientWidth / canvas.clientHeight, 
-        0.1, 
-        1000
+        0.001, // Allow extreme close zooming
+        30
       );
       camera.position.set(0, 3, 7);
       
@@ -89,8 +89,13 @@ export default function tinyPlanetsGame() {
       // Add orbit controls
       controls = new OrbitControls(camera, canvas);
       controls.enableDamping = true;
-      controls.dampingFactor = 0.05;
+      controls.dampingFactor = 0.1;
+      controls.minDistance = 0.05; // Allow extremely close zoom
+      controls.maxDistance = 10;
       controls.target.set(0, 4.5, 0); // Look at the rabbit position
+      
+      // Add zoom event handler for character scaling
+      canvas.addEventListener('wheel', this.handleZoom.bind(this));
       
       // Handle window resize
       window.addEventListener('resize', this.onResize = () => {
@@ -111,6 +116,9 @@ export default function tinyPlanetsGame() {
           if (isRotating && planet) {
             planet.rotation.y += 0.005;
           }
+          
+          // Update rabbit scale based on camera distance (in animation loop for smooth transitions)
+          this.updateRabbitScale();
         }
         
         controls.update();
@@ -120,11 +128,59 @@ export default function tinyPlanetsGame() {
       animate();
     },
     
+    // Constants for rabbit scaling
+    BASE_CHARACTER_SIZE: 1.0,
+    MIN_CHARACTER_SCALE: 0.1,  // 10% size at closest zoom (microscopic)
+    MAX_CHARACTER_SCALE: 2.0,  // 200% size at farthest zoom
+    BASE_MOVE_SPEED: 0.02,    // Base movement speed
+    MIN_MOVE_SPEED: 0.0005,   // Ultra-slow movement at closest zoom
+    
+    handleZoom(event) {
+      // This function just handles the scroll event
+      // Actual scaling happens in updateRabbitScale to make it smooth
+    },
+    
+    updateRabbitScale() {
+      if (!rabbit || !camera) return;
+      
+      // Calculate camera distance to rabbit
+      const distance = camera.position.distanceTo(rabbit.position);
+      
+      // Calculate zoom factor (0 to 1 range)
+      const zoomFactor = Math.min(Math.max(
+        (distance - controls.minDistance) / (controls.maxDistance - controls.minDistance),
+        0
+      ), 1);
+      
+      // Apply non-linear scaling for better effect at extremes
+      const scaledZoomFactor = Math.pow(zoomFactor, 0.7);
+      
+      // Calculate new scale based on zoom
+      const newScale = this.MIN_CHARACTER_SCALE + 
+          (this.MAX_CHARACTER_SCALE - this.MIN_CHARACTER_SCALE) * scaledZoomFactor;
+      
+      // Apply scale smoothly if it's different enough
+      if (Math.abs(rabbit.scale.x - newScale) > 0.001) {
+        // Apply smoothed scaling for more natural transitions
+        rabbit.scale.lerp(new THREE.Vector3(newScale, newScale, newScale), 0.1);
+      }
+    },
+    
     updateRabbitMovement() {
       if (!rabbit || !planet || isJumping) return;
       
-      // Movement speed
-      const moveSpeed = 0.02;
+      // Calculate camera distance for speed adjustment
+      const distance = camera.position.distanceTo(rabbit.position);
+      
+      // Calculate zoom factor (0 to 1)
+      const zoomFactor = Math.min(Math.max(
+        (distance - controls.minDistance) / (controls.maxDistance - controls.minDistance),
+        0
+      ), 1);
+      
+      // Scale movement speed based on zoom (slower when zoomed in)
+      const moveSpeed = this.MIN_MOVE_SPEED + 
+          (this.BASE_MOVE_SPEED - this.MIN_MOVE_SPEED) * zoomFactor;
       
       // Get camera relative directions for movement
       const cameraDirection = new THREE.Vector3();
@@ -174,6 +230,7 @@ export default function tinyPlanetsGame() {
         rotationAxis.normalize();
         
         // Rotate the planet (which effectively moves the rabbit in the opposite direction)
+        // Use zoom-dependent speed
         planet.rotateOnWorldAxis(rotationAxis, -moveSpeed);
         
         // Orient the rabbit to face the movement direction
@@ -202,8 +259,9 @@ export default function tinyPlanetsGame() {
           rabbit.quaternion.slerp(targetRotation, 0.15);
         }
         
-        // Apply hopping animation
-        this.animateHopping();
+        // Apply hopping animation - adjust speed based on movement speed
+        const hopSpeed = moveSpeed / this.BASE_MOVE_SPEED; // Normalize to base speed
+        this.animateHopping(hopSpeed);
       } else {
         // Reset to normal pose if not moving
         this.resetRabbitPose();
@@ -213,9 +271,9 @@ export default function tinyPlanetsGame() {
     // Animation time for continuous hopping
     hopAnimationTime: 0,
     
-    animateHopping() {
+    animateHopping(hopSpeed = 1) {
       // Update animation time
-      this.hopAnimationTime += 0.15;
+      this.hopAnimationTime += 0.15 * hopSpeed;
       
       // Get body parts
       const body = rabbit.getObjectByName("body");
@@ -235,7 +293,8 @@ export default function tinyPlanetsGame() {
       
       // Calculate hop phase based on sine wave
       const hopCycle = Math.sin(this.hopAnimationTime);
-      const hopHeight = Math.max(0, hopCycle) * 0.1;
+      // Scale hop height by speed factor (smaller hops when slower)
+      const hopHeight = Math.max(0, hopCycle) * 0.1 * Math.min(hopSpeed, 1.5);
       
       // Apply small vertical hop motion to whole rabbit
       const upVector = rabbit.position.clone().normalize();
@@ -583,6 +642,11 @@ export default function tinyPlanetsGame() {
       document.removeEventListener('keydown', () => {});
       document.removeEventListener('keyup', () => {});
       
+      // Remove wheel listener
+      if (this.$refs?.gameCanvas) {
+        this.$refs.gameCanvas.removeEventListener('wheel', this.handleZoom);
+      }
+      
       // Clean up Three.js resources
       if (renderer) {
         renderer.dispose();
@@ -592,6 +656,8 @@ export default function tinyPlanetsGame() {
       camera = null;
       renderer = null;
       controls = null;
+      rabbit = null;
+      planet = null;
     }
   };
 } 
