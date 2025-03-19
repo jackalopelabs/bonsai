@@ -1,0 +1,31 @@
+@import "tailwindcss" theme(static);
+@source "../views/";
+@source "../../app/";
+@theme {
+    --color-midnight-950: #060614;
+}
+
+@layer base {
+    :root {
+        --background: 255 255 255;
+        --foreground: 15 23 42;
+    }
+
+    .dark {
+        --background: 6 6 20;
+        --foreground: 255 255 255;
+    }
+
+    body {
+        @apply text-gray-900 dark:text-white bg-white dark:bg-midnight-950;
+    }
+
+    a {
+        @apply no-underline;
+        text-decoration: none !important;
+    }
+    
+    a:hover {
+        text-decoration: none !important;
+    }
+}

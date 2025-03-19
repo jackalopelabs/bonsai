@@ -1,0 +1,20 @@
+# Created by trellis-cli v1.13.0
+# Documentation: https://roots.io/trellis/docs/wordpress-sites/
+
+wordpress_sites:
+  bonsai.so:
+    site_hosts:
+    - canonical: bonsai.so
+      redirects:
+      - www.bonsai.so
+    local_path: ../site
+    branch: master
+    repo: git@github.com:example/example.com.git
+    repo_subtree_path: site
+    multisite:
+      enabled: false
+    ssl:
+      enabled: false
+      provider: letsencrypt
+    cache:
+      enabled: false

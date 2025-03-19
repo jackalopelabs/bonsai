@@ -93,8 +93,7 @@ If I were working on my project called Chosen with a [sitename]=`chosen.bonsai.s
 @staging:
   ssh: web@staging.chosen.bonsai.so/srv/www/chosen.bonsai.so/current
 @production:
-  ssh: web@chosen.bonsai.so/srv/www/ch
-  osen.bonsai.so/current
+  ssh: web@chosen.bonsai.so/srv/www/chosen.bonsai.so/current
 ```
 
 Aligning Lima VM with /etc/hosts and SSH Config:
@@ -193,3 +192,5 @@ If that fails because of a permission error, ssh into the server and run–
 Uncomment out 'Run Acorn optimize' in the `trellis/deploy-hooks/build-after.yml` for the first deployment
 
 If acorn fails on build-after, then we might need to comment out trellis/deploy-hooks/build-after.yml 'Run Acorn optimize' for the first deployment. Then re-deploy– `trellis deploy staging`
+
+If I say "Build Bonsai Games", this is what you do:
