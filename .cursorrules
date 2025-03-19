@@ -193,4 +193,9 @@ Uncomment out 'Run Acorn optimize' in the `trellis/deploy-hooks/build-after.yml`
 
 If acorn fails on build-after, then we might need to comment out trellis/deploy-hooks/build-after.yml 'Run Acorn optimize' for the first deployment. Then re-deploy– `trellis deploy staging`
 
-If I say "Build Bonsai Games", this is what you do:
+If I say "Build Bonsai Games", this is what you do: (In the cleanest, most best practice way)
+
+1. Add a Games page to the theme, including a template. Duplicate the current used template on the home page. Strip all sections from it, use the layout. Rename the template to `Games Template`.
+2. Create a `games.blade.php` section that will be included on the game template's content
+3. In the game section, all I want to see is a [jackalope-planet] ready to use for Sage 11 in blade/php syntax
+4. Add this `Game` page to the navbar– `site/web/app/themes/sage/resources/views/bonsai/sections/header.blade.php`
