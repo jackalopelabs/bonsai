@@ -1,203 +1,211 @@
 @extends('layouts.app')
 
 @section('content')
-  <div class="tiny-planets-container">
-    <div class="planets-content">
-      <canvas id="planetCanvas"></canvas>
-      
-      <div id="controls" class="planet-controls">
-        <button id="beachBtn">Beach Planet</button>
-        <button id="forestBtn">Forest Planet</button>
-        <button id="snowBtn">Snow Forest Planet</button>
-        <button id="randomBtn">Random Planet</button>
-        <button id="rotateToggle">Toggle Auto-Rotation</button>
-        <button id="wireframeToggle">Toggle Wireframe</button>
+<div>
+  <div id="loading-planet" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 18px; text-align: center;">
+    <div style="border: 4px solid rgba(255, 255, 255, 0.3); border-top: 4px solid #fff; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto 15px;"></div>
+    Loading planet...
+  </div>
+  
+  <div id="planet-container" style="width: 100%; height: 500px; background-color: #000; border-radius: 8px; position: relative; overflow: hidden;"></div>
+  
+  <div id="planet-controls" style="display: none; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background-color: rgba(0, 0, 0, 0.7); padding: 10px 20px; border-radius: 10px; z-index: 100; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 90%;">
+    <div style="display: flex; flex-direction: column; align-items: center; border-right: 1px solid rgba(255, 255, 255, 0.2); padding-right: 10px; margin-right: 10px;">
+      <div style="color: #fff; margin-bottom: 5px; font-size: 12px; text-transform: uppercase;">Planet Type</div>
+      <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;">
+        <button id="btn-beach" class="planet-type active" data-type="beach" style="background-color: rgba(30, 30, 30, 0.8); color: white; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 5px; padding: 5px 10px; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">Beach</button>
+        <button id="btn-forest" class="planet-type" data-type="forest" style="background-color: rgba(30, 30, 30, 0.8); color: white; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 5px; padding: 5px 10px; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">Forest</button>
+        <button id="btn-snow" class="planet-type" data-type="snowForest" style="background-color: rgba(30, 30, 30, 0.8); color: white; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 5px; padding: 5px 10px; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">Snow</button>
+        <button id="btn-desert" class="planet-type" data-type="desert" style="background-color: rgba(30, 30, 30, 0.8); color: white; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 5px; padding: 5px 10px; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">Desert</button>
+        <button id="btn-volcanic" class="planet-type" data-type="volcanic" style="background-color: rgba(30, 30, 30, 0.8); color: white; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 5px; padding: 5px 10px; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">Volcanic</button>
+        <button id="btn-alien" class="planet-type" data-type="alien" style="background-color: rgba(30, 30, 30, 0.8); color: white; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 5px; padding: 5px 10px; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">Alien</button>
+        <button id="btn-gas" class="planet-type" data-type="gasGiant" style="background-color: rgba(30, 30, 30, 0.8); color: white; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 5px; padding: 5px 10px; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">Gas Giant</button>
+        <button id="btn-random" class="planet-type" data-type="random" style="background-color: rgba(30, 30, 30, 0.8); color: white; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 5px; padding: 5px 10px; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">Random</button>
       </div>
-      
-      <div id="instructions" class="planet-instructions">
-        <h3>Controls:</h3>
-        <p>Mouse drag - Rotate planet</p>
-        <p>Mouse wheel - Zoom in/out</p>
-        <p>Auto-rotation - Toggle on/off</p>
-        <p>Change planet - Select a planet type</p>
+    </div>
+    
+    <div style="display: flex; flex-direction: column; align-items: center;">
+      <div style="color: #fff; margin-bottom: 5px; font-size: 12px; text-transform: uppercase;">Options</div>
+      <div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;">
+        <button id="btn-wireframe" class="toggle-button" style="background-color: rgba(30, 30, 30, 0.8); color: white; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 5px; padding: 5px 10px; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">Wireframe</button>
+        <button id="btn-rotate" class="toggle-button active" style="background-color: rgba(100, 149, 237, 0.8); color: white; border: 1px solid rgba(255, 255, 255, 0.8); border-radius: 5px; padding: 5px 10px; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">Auto-Rotate</button>
+        <button id="btn-fps" class="toggle-button" style="background-color: rgba(30, 30, 30, 0.8); color: white; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 5px; padding: 5px 10px; font-size: 12px; cursor: pointer; transition: all 0.2s ease;">Show FPS</button>
       </div>
     </div>
   </div>
-@endsection
 
-<style>
-  .tiny-planets-container {
-    width: 100%;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: #000;
-    color: #fff;
-    position: relative;
-  }
-  
-  .planets-content {
-    width: 100%;
-    height: 100%;
-    position: relative;
-  }
-  
-  #planetCanvas {
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
-  
-  .planet-controls {
-    position: absolute;
-    bottom: 20px;
-    left: 20px;
-    z-index: 100;
-    padding: 10px;
-    background-color: rgba(0, 0, 0, 0.5);
-    border-radius: 5px;
-  }
-  
-  .planet-controls button {
-    background-color: #444;
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    margin: 4px;
-    cursor: pointer;
-    border-radius: 4px;
-  }
-  
-  .planet-controls button:hover {
-    background-color: #666;
-  }
-  
-  .planet-instructions {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    z-index: 100;
-    padding: 10px;
-    background-color: rgba(0, 0, 0, 0.5);
-    border-radius: 5px;
-    max-width: 300px;
-  }
-</style>
-
-<script>
-  window.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, loading scripts...');
+  <style>
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
     
-    // Load Three.js first
-    loadScript('https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.min.js', function() {
-      console.log('Three.js loaded');
+    .planet-type.active,
+    .toggle-button.active {
+      background-color: rgba(100, 149, 237, 0.8) !important;
+      border-color: rgba(255, 255, 255, 0.8) !important;
+    }
+    
+    .planet-type:hover,
+    .toggle-button:hover {
+      background-color: rgba(60, 60, 60, 0.8) !important;
+      border-color: rgba(255, 255, 255, 0.6) !important;
+    }
+  </style>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      let game = null;
       
-      // Then load OrbitControls and make it global
-      loadScript('https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/controls/OrbitControls.js', function() {
-        console.log('OrbitControls loaded');
+      // Load scripts in the correct order
+      function loadThree() {
+        return new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/three@0.137.0/build/three.min.js';
+          script.onload = () => {
+            console.log('Three.js loaded');
+            resolve();
+          };
+          script.onerror = (err) => {
+            console.error('Error loading Three.js:', err);
+            reject(err);
+          };
+          document.head.appendChild(script);
+        });
+      }
+
+      function loadOrbitControls() {
+        return new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/three@0.137.0/examples/js/controls/OrbitControls.js';
+          script.onload = () => {
+            // Make OrbitControls available globally
+            window.OrbitControls = THREE.OrbitControls;
+            console.log('OrbitControls loaded and made global');
+            resolve();
+          };
+          script.onerror = (err) => {
+            console.error('Error loading OrbitControls:', err);
+            reject(err);
+          };
+          document.head.appendChild(script);
+        });
+      }
+
+      function loadCustomScripts() {
+        const basePath = '/app/themes/sage/public/scripts';
+        const scripts = [
+          `${basePath}/planets/simplex-noise.js`,
+          `${basePath}/planets/materials/OceanCausticsMaterial.js`,
+          `${basePath}/planets/materials/AtmosphereMaterial.js`,
+          `${basePath}/planets/presets.js`,
+          `${basePath}/planets/planet.js`,
+          `${basePath}/tiny-planets-game.js`
+        ];
+
+        let chain = Promise.resolve();
         
-        // Make OrbitControls available globally
-        if (typeof THREE.OrbitControls !== 'undefined') {
-          window.OrbitControls = THREE.OrbitControls;
-          console.log('OrbitControls made global');
-        } else {
-          console.error('THREE.OrbitControls not defined after loading');
+        scripts.forEach(src => {
+          chain = chain.then(() => {
+            return new Promise((resolve, reject) => {
+              const script = document.createElement('script');
+              script.src = src;
+              script.onload = () => {
+                console.log(`Loaded ${src}`);
+                resolve();
+              };
+              script.onerror = (err) => {
+                console.error(`Error loading script ${src}:`, err);
+                reject(err);
+              };
+              document.head.appendChild(script);
+            });
+          });
+        });
+        
+        return chain;
+      }
+
+      function initGame() {
+        // Check if tinyPlanetsGame exists
+        if (typeof tinyPlanetsGame !== 'function') {
+          console.error('tinyPlanetsGame function not found!');
+          document.getElementById('loading-planet').innerHTML = 'Error: Planet generator not loaded correctly.';
+          return;
         }
+
+        console.log('Initializing planet game');
         
-        // Then load our other scripts in sequence
-        loadScripts();
-      });
-    });
-    
-    function loadScripts() {
-      const scripts = [
-        '/app/themes/sage/public/scripts/planets/simplex-noise.js',
-        '/app/themes/sage/public/scripts/planets/materials/AtmosphereMaterial.js',
-        '/app/themes/sage/public/scripts/planets/materials/OceanCausticsMaterial.js',
-        '/app/themes/sage/public/scripts/planets/presets.js',
-        '/app/themes/sage/public/scripts/planets/planet.js',
-        '/app/themes/sage/public/scripts/tiny-planets-game.js'
-      ];
-      
-      loadScriptSequentially(scripts, 0, initGame);
-    }
-    
-    function loadScriptSequentially(scripts, index, callback) {
-      if (index >= scripts.length) {
-        callback();
-        return;
-      }
-      
-      loadScript(scripts[index], function() {
-        loadScriptSequentially(scripts, index + 1, callback);
-      });
-    }
-    
-    function loadScript(src, callback) {
-      const script = document.createElement('script');
-      script.type = 'text/javascript';
-      script.src = src;
-      script.onload = callback;
-      script.onerror = function() {
-        console.error('Failed to load script:', src);
-        callback(); // Still continue loading other scripts
-      };
-      document.head.appendChild(script);
-    }
-    
-    function initGame() {
-      console.log('All scripts loaded, initializing game');
-      
-      // Make sure tinyPlanetsGame exists
-      if (typeof tinyPlanetsGame !== 'function') {
-        console.error('tinyPlanetsGame function not found! Check script loading order.');
-        return;
+        // Hide loading indicator, show controls
+        document.getElementById('loading-planet').style.display = 'none';
+        document.getElementById('planet-controls').style.display = 'flex';
+        
+        // Initialize the game
+        game = tinyPlanetsGame('#planet-container', {
+          planetType: 'beach',
+          wireframe: false,
+          autoRotate: true,
+          showFPS: false
+        });
+        
+        game.init();
+        
+        // Set up event listeners for UI controls
+        setupUIControls();
+        
+        // Handle window resize
+        window.addEventListener('resize', function() {
+          game.resize();
+        });
       }
 
-      // Initialize planet generator
-      const canvas = document.getElementById('planetCanvas');
-      
-      console.log('Creating game instance');
-      const game = tinyPlanetsGame(canvas, {
-        showFPS: true,
-        autoRotate: true,
-        initialPlanetType: 'beach'
-      });
-      
-      console.log('Initializing the game');
-      game.init();
-      
-      // Set up button listeners
-      document.getElementById('beachBtn').addEventListener('click', function() {
-        game.changePlanetType('beach');
-      });
-      
-      document.getElementById('forestBtn').addEventListener('click', function() {
-        game.changePlanetType('forest');
-      });
-      
-      document.getElementById('snowBtn').addEventListener('click', function() {
-        game.changePlanetType('snowForest');
-      });
-      
-      document.getElementById('randomBtn').addEventListener('click', function() {
-        game.changePlanetType('random');
-      });
-      
-      document.getElementById('rotateToggle').addEventListener('click', function() {
-        game.toggleAutoRotate();
-      });
-      
-      document.getElementById('wireframeToggle').addEventListener('click', function() {
-        game.toggleWireframe();
-      });
-      
-      // Handle window resize
-      window.addEventListener('resize', function() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-      });
-    }
-  });
-</script> 
+      function setupUIControls() {
+        // Planet type buttons
+        const planetTypeButtons = document.querySelectorAll('.planet-type');
+        planetTypeButtons.forEach(button => {
+          button.addEventListener('click', function() {
+            // Update active button
+            planetTypeButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Change planet type
+            const type = this.getAttribute('data-type');
+            game.changePlanetType(type);
+          });
+        });
+        
+        // Wireframe toggle
+        const wireframeButton = document.getElementById('btn-wireframe');
+        wireframeButton.addEventListener('click', function() {
+          this.classList.toggle('active');
+          game.toggleWireframe();
+        });
+        
+        // Auto-rotate toggle
+        const rotateButton = document.getElementById('btn-rotate');
+        rotateButton.addEventListener('click', function() {
+          this.classList.toggle('active');
+          game.toggleAutoRotate();
+        });
+        
+        // FPS toggle
+        const fpsButton = document.getElementById('btn-fps');
+        fpsButton.addEventListener('click', function() {
+          this.classList.toggle('active');
+          game.toggleFPS();
+        });
+      }
+
+      // Load scripts in sequence
+      loadThree()
+        .then(loadOrbitControls)
+        .then(loadCustomScripts)
+        .then(initGame)
+        .catch(error => {
+          console.error('Error in script loading sequence:', error);
+          document.getElementById('loading-planet').innerHTML = 'Error loading planet. Please try again.';
+        });
+    });
+  </script>
+</div>
+@endsection 
