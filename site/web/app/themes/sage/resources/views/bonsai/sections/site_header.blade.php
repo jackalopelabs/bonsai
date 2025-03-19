@@ -19,6 +19,10 @@ $siteHeaderData = [
             'url' => '/groups',
             'label' => 'Groups',
         ],
+        [
+            'url' => '/games',
+            'label' => 'Games',
+        ],
     ],
     'primaryLink' => '/new-challenge',
     'containerClasses' => 'px-6 flex justify-between items-center w-full',
