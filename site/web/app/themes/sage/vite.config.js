@@ -29,6 +29,11 @@ export default defineConfig({
         'resources/js/app.js',
         'resources/css/editor.css',
         'resources/js/editor.js',
+        'resources/scripts/tiny-planets-game.js',
+        'resources/scripts/planets/planet.js',
+        'resources/scripts/planets/presets.js',
+        'resources/scripts/planets/materials/AtmosphereMaterial.js',
+        'resources/scripts/planets/materials/OceanCausticsMaterial.js'
       ],
       refresh: true,
     }),

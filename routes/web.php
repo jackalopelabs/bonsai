@@ -1,0 +1,1 @@
+// Remove the test-planet route as we're using a WordPress page template now 
