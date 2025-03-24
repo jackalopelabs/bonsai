@@ -5,6 +5,6 @@ server:
 @development:
   ssh: bonsai.test/srv/www/bonsai.so/current
 @staging:
-  ssh: web@staging.bonsai.so/srv/www/bonsai.so/current
+  ssh: web@staging.games.bonsai.so/srv/www/bonsai.so/current
 @production:
   ssh: web@bonsai.so/srv/www/bonsai.so/current
