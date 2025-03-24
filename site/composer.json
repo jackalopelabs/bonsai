@@ -33,6 +33,14 @@
             "type": "vcs",
             "url": "git@github.com:jackalopelabs/bonsai-cli.git"
         },
+        "jackalopes-server": {
+            "type": "vcs",
+            "url": "git@github.com:jackalopelabs/jackalopes-server.git"
+        },
+        "jackalope-planet": {
+            "type": "vcs",
+            "url": "git@github.com:jackalopelabs/jackalope-planet.git"
+        },
         "0": {
             "type": "composer",
             "url": "https://wpackagist.org",
@@ -53,7 +61,9 @@
         "roots/wp-config": "1.0.0",
         "roots/wp-password-bcrypt": "1.2.0",
         "wpackagist-theme/twentytwentyfive": "^1.0",
-        "jackalopelabs/bonsai-cli": "dev-kanban"
+        "jackalopelabs/bonsai-cli": "dev-kanban",
+        "jackalopelabs/jackalopes-server": "dev-main",
+        "jackalopelabs/jackalope-planet": "dev-main"
     },
     "require-dev": {
         "roave/security-advisories": "dev-latest",

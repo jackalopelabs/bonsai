@@ -4,12 +4,12 @@
 wordpress_sites:
   bonsai.so:
     site_hosts:
-    - canonical: bonsai.so
+    - canonical: staging.games.bonsai.so
       redirects:
-      - www.bonsai.so
+      - www.staging.games.bonsai.so
     local_path: ../site
-    branch: master
-    repo: git@github.com:example/example.com.git
+    branch: games
+    repo: git@github.com:jackalopelabs/bonsai.git
     repo_subtree_path: site
     multisite:
       enabled: false

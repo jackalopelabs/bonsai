@@ -168,6 +168,22 @@ If I tell you that I want to configure for staging or production deployment this
 
 For staging:
 
+Create a DigitalOcean Droplet:
+```yaml
+curl -X POST -H 'Content-Type: application/json' \
+    -H 'Authorization: Bearer '$TOKEN'' \
+    -d '{"name":"games.bonsai.so",
+        "size":"s-1vcpu-1gb",
+        "region":"sfo3",
+        "image":"ubuntu-24-04-x64",
+        "vpc_uuid":"fd1b24c0-70fa-4e28-8d9a-04af598a4ea7",
+        "tags":["trellis",
+        "sage-11",
+        "bedrock",
+        "bonsai-cli"]}' \
+    "https://api.digitalocean.com/v2/droplets"
+```
+
 - Make sure group_vars/staging/wordpress_sites.yml is set to `main` not `master` branch
 - Don't forget hosts/staging.yml host name set to the [sitename]
 - Generate a random secure password and save it as .vault_pass
@@ -200,3 +216,4 @@ If I say "Build Bonsai Games", this is what you do: (In the cleanest, most best 
 3. In the game section, all I want to see is a [jackalope-planet] ready to use for Sage 11 in blade/php syntax
 4. Add this `Game` page to the navbar– `site/web/app/themes/sage/resources/views/bonsai/sections/header.blade.php`
 5. Update the template path to match Sage's expected format: `wp @development post meta update 6 _wp_page_template "bonsai/templates/template-games"`
+6. Add https://github.com/jackalopelabs/jackalope-planet plugin
