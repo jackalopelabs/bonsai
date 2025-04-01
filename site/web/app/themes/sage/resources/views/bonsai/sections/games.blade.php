@@ -23,7 +23,7 @@
                     <span>Fullscreen</span>
                 </button>
             </div>
-            {!! do_shortcode('[jackalope-planet height="70vh"]') !!}
+            {!! do_shortcode('[jackalopes width="800px" height="500px" fullscreen="true"]') !!}
         </div>
         
         <div class="mt-12 grid md:grid-cols-2 gap-8">
