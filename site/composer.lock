@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "05d66fd267f0a8e9852364698302cd0b",
+    "content-hash": "daf1298675b778b74f38e5cfeb95a663",
     "packages": [
         {
             "name": "blade-ui-kit/blade-heroicons",
@@ -2945,12 +2945,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/jackalopelabs/jackalopes-wp.git",
-                "reference": "7fc85f9cfaa8f328e536e191f41aca3d757b11a9"
+                "reference": "1b77b39e85eda51bfdf7d82077893cb53fe07523"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/jackalopelabs/jackalopes-wp/zipball/7fc85f9cfaa8f328e536e191f41aca3d757b11a9",
-                "reference": "7fc85f9cfaa8f328e536e191f41aca3d757b11a9",
+                "url": "https://api.github.com/repos/jackalopelabs/jackalopes-wp/zipball/1b77b39e85eda51bfdf7d82077893cb53fe07523",
+                "reference": "1b77b39e85eda51bfdf7d82077893cb53fe07523",
                 "shasum": ""
             },
             "require": {
@@ -2984,7 +2984,7 @@
                 "source": "https://github.com/jackalopelabs/jackalopes-wp/tree/retrograde",
                 "issues": "https://github.com/jackalopelabs/jackalopes-wp/issues"
             },
-            "time": "2025-04-02T06:08:06+00:00"
+            "time": "2025-04-02T06:23:26+00:00"
         },
         {
             "name": "laravel/prompts",
