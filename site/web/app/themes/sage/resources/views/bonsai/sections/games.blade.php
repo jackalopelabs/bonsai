@@ -6,12 +6,17 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-12">
             <h2 class="text-4xl font-extrabold text-white sm:text-5xl">
-                <span class="block">Jackalope Planet</span>
-                <span class="block text-indigo-400 mt-2">Multiplayer Edition</span>
+                <div class="flex items-center justify-center">
+                    <span class="flex items-center">
+                        <svg class="h-12 w-12 mr-2 p-1" height="28" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 33" style="fill: white"><path d="M12.7 14.6c-2 0-3.9.3-5.8 1.2-2.1 1-3.2 3.4-4.2 5.4-.3.8-.5 1.7-.7 2.5-.1.9.1 1.8-.1 2.7-2.4-.4-1.2 5.9.6 4.1-.2 1.5.6 1.6 1.7 1.1 1-.5 1.9-.6 3-.8.8-.1.7-.2 1.1-.8.1-.3.6-1 1.1-.7.6.3-.2 2.1-.1 2.8.1 1.1 1.2.7 2.2.8.9 0 1.8.2 2.7.1.5 0 1.1 0 1.4-.4.3-.5.1-1-.2-1.3-.7-.5-1.9-.3-2.8-.2-1.2.1-1.9-.2-1.4-1.5.4-1 .9-1.9 1.3-2.8.4-1 .3-2.4 1.6-2.1 1.4.4 1.5 1.2 1.7 2.5.3 1.4 1.2 5.6 3.1 5.1.2 0 .2-.7.4-.9.3 0 .6.6 1 .6.8-.2.5-.5.1-1-.9-1.1-.9-1.9-1.1-3.2-.2-1.1-.9-2.4-.8-3.4 0-1 1.3-1.6 2-2.2.9-.8 1.4-1.6 1.7-2.7.1-.5.2-1.2.6-1.5.4-.3.9 0 1.3-.1.9-.1 1.9-.6 2-1.6.1-1.1-.5-1.9-.5-2.8 0-.8.4-.8-.3-1.4-.4-.3-1-.4-.8-1 .1-.5.8-1.3 1.2-1.6.4-.4.7-.8 1.1-1.2.9-1 2-.5 3.1-1.9-.7-.2-1.8 1.4-2.2.5-.2-.5.7-2.5 1.1-3 .5-1 1.4-1.9 0-3.8-.2.9.1 1.1-.1 2.1-.2 1.1-.7 2-1.4 2.9-.6 1-1.2 2-1.7 3.1-.3.5-1.2 2.6-1.9 2.7-1 .1 0-2.3.2-2.9.4-1.1.8-2.1 1-3.2.1-.9.5-2.3 0-3.2-.5-1-2-1.1-2.5 0-.8 1.8 1 4.7-.2 6.3-1 1.4-1-1-.9-1.6.2-1.1-.5-1.7-.7-2.9-.1-.6-.1-1.3-.2-1.9-.4.4-.5 1-.4 1.4-.5.1-.7-.6-1.1-.8-.5-.2-1.1 0-1.4.3-.9.7-.4 2.1-.1 3 .4 1.1.7 2.1 1.1 3.2.5 1.1 1.2 2.1 1.6 3.2.3 1-.6 2.2-1.6 2.3"></path></svg>
+                        Jackalopes
+                    </span>
+                </div>
+                <span class="block text-indigo-400 mt-2 text-sm">Multiplayer Edition</span>
             </h2>
-            <p class="mt-4 text-xl text-indigo-100">
-                Experience our interactive 3D game with team-based multiplayer
-            </p>
+            {{-- <p class="mt-4 text-xl text-indigo-100 text-xs">
+                Jackalope Planet is a multiplayer game experience built with Three.js. Players can join as either Team Jackalope (bunny characters) or Team Merc (human astronauts with flamethrowers).
+            </p> --}}
         </div>
         
         <div class="relative bg-black rounded-xl shadow-xl overflow-hidden">
@@ -26,7 +31,7 @@
             {!! do_shortcode('[jackalopes]') !!}
         </div>
         
-        <div class="mt-12 grid md:grid-cols-2 gap-8">
+        {{-- <div class="mt-12 grid md:grid-cols-2 gap-8">
             <div class="text-indigo-100 text-lg">
                 <h3 class="text-2xl font-bold text-white mb-4">About Jackalope Planet</h3>
                 <p class="mb-4">
@@ -69,21 +74,11 @@
             <p class="mt-4">
                 In an actual multiplayer session, other players would join from different browsers or devices, but this God Mode allows you to test the experience on your own.
             </p>
-        </div>
+        </div> --}}
     </div>
 </div>
 
 <style id="jackalope-ui-fix">
-/* Core containment styles */
-#jackalopes-game-container, 
-.jackalopes-game-container,
-.jackalope-planet-container,
-.relative.bg-black.rounded-xl {
-    position: relative !important;
-    overflow: visible !important;
-    min-height: 600px;
-    z-index: 1;
-}
 
 /* Fix for UI elements that might get created at body level */
 body > .fps-stats,

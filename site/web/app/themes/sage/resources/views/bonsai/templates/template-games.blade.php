@@ -6,4 +6,5 @@
 
 @section('content')
     @include('bonsai.sections.games')
+    @include('bonsai.sections.site_footer')
 @endsection
