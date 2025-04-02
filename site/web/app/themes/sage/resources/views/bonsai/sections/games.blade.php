@@ -23,7 +23,7 @@
                     <span>Fullscreen</span>
                 </button>
             </div>
-            {!! do_shortcode('[jackalopes disable_threejs="true"]') !!}
+            {!! do_shortcode('[jackalopes]') !!}
         </div>
         
         <div class="mt-12 grid md:grid-cols-2 gap-8">
@@ -73,562 +73,405 @@
     </div>
 </div>
 
+<style id="jackalope-ui-fix">
+/* Core containment styles */
+#jackalopes-game-container, 
+.jackalopes-game-container,
+.jackalope-planet-container,
+.relative.bg-black.rounded-xl {
+    position: relative !important;
+    overflow: visible !important;
+    min-height: 600px;
+    z-index: 1;
+}
+
+/* Fix for UI elements that might get created at body level */
+body > .fps-stats,
+body > .virtual-gamepad,
+body > #stats,
+body > .leva-c-kWgxhW,
+body > button[style*="position: fixed"],
+body > div[style*="position: fixed"][style*="z-index"],
+body > .jackalopes-ui,
+body > .jackalope-ui-element {
+    position: absolute !important; 
+    z-index: 9999 !important;
+    top: auto !important;
+    left: auto !important;
+}
+
+/* Game container selectors */
+.jackalopes-game-container canvas,
+#jackalopes-game-container canvas,
+.relative.bg-black.rounded-xl canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block !important;
+}
+
+/* Fullscreen mode */
+.game-fullscreen,
+.jp-fullscreen,
+.fullscreen-active {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 9999 !important;
+    background: #000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Ensure UI elements are visible in fullscreen */
+.game-fullscreen .fps-stats,
+.game-fullscreen #stats,
+.game-fullscreen .leva-c-kWgxhW,
+.game-fullscreen .jackalopes-ui,
+.game-fullscreen div[style*="position: fixed"],
+.game-fullscreen button,
+.jp-fullscreen .fps-stats,
+.jp-fullscreen #stats,
+.jp-fullscreen .leva-c-kWgxhW,
+.jp-fullscreen .jackalopes-ui,
+.jp-fullscreen div[style*="position: fixed"],
+.jp-fullscreen button,
+.fullscreen-active .fps-stats,
+.fullscreen-active #stats,
+.fullscreen-active .leva-c-kWgxhW,
+.fullscreen-active .jackalopes-ui,
+.fullscreen-active div[style*="position: fixed"],
+.fullscreen-active button {
+    position: fixed !important;
+    z-index: 10000 !important;
+    display: block !important;
+}
+
+/* Add class to make elements visible in fullscreen */
+.jackalope-ui-element {
+    z-index: 10000 !important;
+}
+
+/* Fix for Leva UI panel specifically */
+.leva-c-kWgxhW {
+    z-index: 10000 !important;
+    position: absolute !important;
+    top: 10px !important;
+    right: 10px !important;
+}
+
+/* Fix for Game Stats */
+#stats {
+    position: absolute !important;
+    top: 10px !important;
+    left: 10px !important;
+    z-index: 10000 !important;
+}
+
+/* Fullscreen button styles when active */
+#fullscreen-btn.exit {
+    position: fixed !important;
+    top: 10px !important;
+    right: 10px !important;
+    z-index: 10001 !important;
+}
+</style>
+
 <script>
-// Force fullscreen handling with direct canvas manipulation
-document.addEventListener('DOMContentLoaded', () => {
-    // Function to find game container
-    function findGameElement() {
-        // Try specific selectors in order of likelihood
-        return document.querySelector('#jackalope-planet-container') || 
-               document.querySelector('.jackalope-planet-canvas-container') || 
-               document.querySelector('.jackalopes-canvas-container') ||
-               document.querySelector('canvas.jackalope-render-target') ||
-               document.querySelector('.relative.bg-black.rounded-xl canvas') ||
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Initializing Jackalope UI containment and fullscreen handler');
+    
+    // Function to find game container - try multiple possible selectors
+    function findGameContainer() {
+        return document.querySelector('.jackalopes-game-container') || 
+               document.querySelector('#jackalopes-game-container') ||
+               document.querySelector('.jackalope-planet-container') ||
+               document.querySelector('#jackalope-planet-container') ||
                document.querySelector('.relative.bg-black.rounded-xl');
     }
     
-    // Direct fullscreen handler
-    const fullscreenBtn = document.getElementById('fullscreen-btn');
-    if (fullscreenBtn) {
-        // Force inline styles to ensure fullscreen works correctly
-        const fullscreenCSS = document.createElement('style');
-        fullscreenCSS.innerHTML = `
-            .jp-fullscreen {
-                position: fixed !important;
-                top: 0 !important;
-                left: 0 !important;
-                width: 100vw !important;
-                height: 100vh !important;
-                max-width: 100vw !important;
-                max-height: 100vh !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                z-index: 9999 !important;
-                background-color: #000 !important;
-                display: block !important;
-                overflow: hidden !important;
-            }
+    // Set up enhanced UI containment for all game UI elements
+    function setupUIContainment() {
+        // Find the game container
+        const gameContainer = findGameContainer();
+        if (!gameContainer) {
+            console.log('Game container not found yet, waiting...');
             
-            .jp-fullscreen canvas {
-                width: 100vw !important;
-                height: 100vh !important;
-                display: block !important;
-                max-width: none !important;
-                max-height: none !important;
-                margin: 0 !important;
-                padding: 0 !important;
-            }
+            // Wait for it to be created
+            const observer = new MutationObserver((mutations) => {
+                const container = findGameContainer();
+                if (container) {
+                    console.log('Game container found:', container);
+                    observer.disconnect();
+                    setupUIContainmentForContainer(container);
+                }
+            });
             
-            /* Hide any UI that might appear over the game */
-            .jp-fullscreen ~ * {
-                display: none !important;
-            }
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
             
-            .jp-fullscreen * {
-                overflow: visible !important;
-            }
-            
-            #fullscreen-btn.exit {
-                position: fixed !important;
-                top: 10px !important;
-                right: 10px !important;
-                z-index: 10000 !important;
-            }
-        `;
-        document.head.appendChild(fullscreenCSS);
+            // Also check again after a short delay
+            setTimeout(() => {
+                const container = findGameContainer();
+                if (container) {
+                    console.log('Game container found after delay:', container);
+                    setupUIContainmentForContainer(container);
+                }
+            }, 1000);
+        } else {
+            console.log('Game container found immediately:', gameContainer);
+            setupUIContainmentForContainer(gameContainer);
+        }
+    }
+    
+    // Function to set up containment for a specific container
+    function setupUIContainmentForContainer(container) {
+        console.log('Setting up UI containment for container:', container);
         
-        fullscreenBtn.addEventListener('click', () => {
-            const gameElement = findGameElement();
+        // Add a class for easier styling
+        container.classList.add('jackalope-game-container');
+        
+        // Set up fullscreen functionality
+        setupFullscreenHandler(container);
+        
+        // Find all UI elements and move them into the container
+        function relocateUIElements() {
+            // List of selectors for UI elements
+            const uiSelectors = [
+                '.fps-stats', 
+                '.virtual-gamepad',
+                '#stats',
+                '.leva-c-kWgxhW',
+                'div[style*="position: fixed"][style*="z-index"]',
+                'button[style*="position: fixed"][style*="z-index"]',
+                '.jackalopes-ui'
+            ];
             
-            if (!gameElement) {
-                console.error('Could not find game container for fullscreen');
-                return;
+            // Find all UI elements
+            uiSelectors.forEach(selector => {
+                const elements = document.querySelectorAll(selector);
+                
+                elements.forEach(element => {
+                    // Skip if already in the container
+                    if (element.parentElement === container) {
+                        return;
+                    }
+                    
+                    console.log('Moving UI element into container:', element);
+                    
+                    // Add class for easier styling
+                    element.classList.add('jackalope-ui-element');
+                    
+                    // Get current position
+                    const rect = element.getBoundingClientRect();
+                    const containerRect = container.getBoundingClientRect();
+                    
+                    // Calculate relative position within container
+                    let top = rect.top - containerRect.top;
+                    let left = rect.left - containerRect.left;
+                    
+                    // Ensure element doesn't go outside container
+                    top = Math.max(0, Math.min(top, containerRect.height - 50));
+                    left = Math.max(0, Math.min(left, containerRect.width - 50));
+                    
+                    // Move to container
+                    container.appendChild(element);
+                    
+                    // Set position
+                    element.style.position = 'absolute';
+                    element.style.top = top + 'px';
+                    element.style.left = left + 'px';
+                    element.style.zIndex = '9999';
+                });
+            });
+        }
+        
+        // Relocate UI elements initially
+        relocateUIElements();
+        
+        // Set up observer to detect new UI elements
+        const observer = new MutationObserver((mutations) => {
+            let shouldRelocate = false;
+            
+            mutations.forEach(mutation => {
+                if (mutation.addedNodes.length > 0) {
+                    for (let i = 0; i < mutation.addedNodes.length; i++) {
+                        const node = mutation.addedNodes[i];
+                        if (node.nodeType === 1) { // Element node
+                            if (node.classList && 
+                                (node.classList.contains('fps-stats') || 
+                                 node.id === 'stats' || 
+                                 node.classList.contains('leva-c-kWgxhW') ||
+                                 node.classList.contains('jackalopes-ui') ||
+                                 node.style.position === 'fixed')) {
+                                shouldRelocate = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            });
+            
+            if (shouldRelocate) {
+                relocateUIElements();
             }
-            
-            console.log('Found game element:', gameElement);
-            
+        });
+        
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['style', 'class']
+        });
+        
+        // Also set an interval to check periodically
+        setInterval(relocateUIElements, 1000);
+    }
+    
+    // Set up fullscreen functionality
+    function setupFullscreenHandler(container) {
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        if (!fullscreenBtn) {
+            console.log('Fullscreen button not found');
+            return;
+        }
+        
+        console.log('Setting up fullscreen handler for container:', container);
+        
+        fullscreenBtn.addEventListener('click', function() {
             if (!document.fullscreenElement) {
                 // Enter fullscreen
-                console.log('Entering fullscreen mode');
+                console.log('Entering fullscreen');
                 
                 try {
-                    // First try to go fullscreen
-                    gameElement.requestFullscreen()
-                        .then(() => {
-                            console.log('Fullscreen entered successfully');
-                            
-                            // Apply fullscreen specific styling
-                            gameElement.classList.add('jp-fullscreen');
-                            fullscreenBtn.classList.add('exit');
-                            
-                            // Update button
-                            fullscreenBtn.innerHTML = `
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20H5m0 0v-4m0 4l5-5m11 5l-5-5m5 5v-4m0 4h-4M4 8V4m0 0h4M4 4l5 5"></path>
-                                </svg>
-                                <span>Exit Fullscreen</span>
-                            `;
-                            
-                            // Find and resize the canvas
-                            const canvas = gameElement.querySelector('canvas') || gameElement;
-                            
-                            // Force dimension update
-                            setTimeout(() => {
-                                canvas.style.width = '100vw';
-                                canvas.style.height = '100vh';
-                                
-                                // Trigger resize events for the game
-                                if (window.game) {
-                                    console.log('Triggering game resize');
-                                    // Try multiple resize methods
-                                    if (window.game.resize) window.game.resize();
-                                    if (window.game.onWindowResize) window.game.onWindowResize();
-                                    if (window.game.renderer) {
-                                        window.game.renderer.setSize(window.innerWidth, window.innerHeight);
-                                        if (window.game.camera) {
-                                            window.game.camera.aspect = window.innerWidth / window.innerHeight;
-                                            window.game.camera.updateProjectionMatrix();
-                                        }
-                                    }
-                                }
-                                
-                                // General resize event
-                                window.dispatchEvent(new Event('resize'));
-                            }, 100);
-                        })
-                        .catch(err => {
-                            console.error('Error entering fullscreen:', err);
-                            
-                            // Fallback approach - apply fullscreen-like styling without actual fullscreen
-                            gameElement.classList.add('jp-fullscreen');
-                            fullscreenBtn.classList.add('exit');
-                            
-                            fullscreenBtn.innerHTML = `
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20H5m0 0v-4m0 4l5-5m11 5l-5-5m5 5v-4m0 4h-4M4 8V4m0 0h4M4 4l5 5"></path>
-                                </svg>
-                                <span>Exit Fullscreen</span>
-                            `;
+                    // First, mark all UI elements
+                    const uiElements = document.querySelectorAll('.fps-stats, #stats, .leva-c-kWgxhW, .jackalopes-ui, div[style*="position: fixed"], button[style*="position: fixed"]');
+                    uiElements.forEach(el => {
+                        el.classList.add('jackalope-ui-element');
+                        el.dataset.originalPosition = window.getComputedStyle(el).position;
+                        el.dataset.originalZIndex = window.getComputedStyle(el).zIndex;
+                    });
+                    
+                    // Request fullscreen
+                    container.requestFullscreen().then(() => {
+                        container.classList.add('game-fullscreen');
+                        fullscreenBtn.classList.add('exit');
+                        
+                        // Update button
+                        fullscreenBtn.innerHTML = `
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20H5m0 0v-4m0 4l5-5m11 5l-5-5m5 5v-4m0 4h-4M4 8V4m0 0h4M4 4l5 5"></path>
+                            </svg>
+                            <span>Exit Fullscreen</span>
+                        `;
+                        
+                        // Fix UI elements
+                        uiElements.forEach(el => {
+                            el.style.position = 'fixed';
+                            el.style.zIndex = '10000';
                         });
+                        
+                        // Add temporary style
+                        const style = document.createElement('style');
+                        style.id = 'temp-fullscreen-fix';
+                        style.textContent = `
+                            body > .jackalope-ui-element {
+                                position: fixed !important;
+                                z-index: 10000 !important;
+                                display: block !important;
+                            }
+                        `;
+                        document.head.appendChild(style);
+                        
+                        // Trigger resize
+                        window.dispatchEvent(new Event('resize'));
+                    }).catch(err => {
+                        console.error('Error entering fullscreen:', err);
+                    });
                 } catch (e) {
                     console.error('Could not request fullscreen:', e);
                 }
             } else {
                 // Exit fullscreen
-                console.log('Exiting fullscreen mode');
-                
-                try {
-                    document.exitFullscreen()
-                        .then(() => {
-                            console.log('Exited fullscreen successfully');
-                        })
-                        .catch(err => {
-                            console.error('Error exiting fullscreen:', err);
-                        })
-                        .finally(() => {
-                            // Always clean up whether or not exitFullscreen succeeds
-                            resetFromFullscreen(gameElement);
-                        });
-                } catch (e) {
-                    console.error('Error during exitFullscreen():', e);
-                    // Still clean up even if there's an error
-                    resetFromFullscreen(gameElement);
-                }
-            }
-        });
-        
-        // Handle esc key and other ways of exiting fullscreen
-        document.addEventListener('fullscreenchange', () => {
-            const gameElement = findGameElement();
-            
-            if (!document.fullscreenElement && gameElement) {
-                resetFromFullscreen(gameElement);
-            }
-        });
-        
-        function resetFromFullscreen(element) {
-            console.log('Cleaning up fullscreen styles');
-            
-            // Remove fullscreen classes
-            element.classList.remove('jp-fullscreen');
-            fullscreenBtn.classList.remove('exit');
-            
-            // Reset button
-            fullscreenBtn.innerHTML = `
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
-                </svg>
-                <span>Fullscreen</span>
-            `;
-            
-            // Find and reset the canvas
-            const canvas = element.querySelector('canvas') || element;
-            canvas.style.width = '';
-            canvas.style.height = '';
-            
-            // Trigger resize events for the game
-            if (window.game) {
-                // Try multiple resize methods
-                if (window.game.resize) window.game.resize();
-                if (window.game.onWindowResize) window.game.onWindowResize();
-                if (window.game.renderer) {
-                    // Reset the renderer size to the container size
-                    const container = document.querySelector('.relative.bg-black.rounded-xl');
-                    if (container) {
-                        const width = container.clientWidth;
-                        const height = container.clientHeight;
-                        window.game.renderer.setSize(width, height);
-                        if (window.game.camera) {
-                            window.game.camera.aspect = width / height;
-                            window.game.camera.updateProjectionMatrix();
+                document.exitFullscreen().catch(err => {
+                    console.error('Error exiting fullscreen:', err);
+                }).finally(() => {
+                    // Clean up
+                    container.classList.remove('game-fullscreen');
+                    fullscreenBtn.classList.remove('exit');
+                    
+                    // Update button
+                    fullscreenBtn.innerHTML = `
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+                        </svg>
+                        <span>Fullscreen</span>
+                    `;
+                    
+                    // Restore UI elements
+                    const uiElements = document.querySelectorAll('.jackalope-ui-element');
+                    uiElements.forEach(el => {
+                        if (el.dataset.originalPosition) {
+                            el.style.position = el.dataset.originalPosition;
                         }
-                    }
-                }
-            }
-            
-            // General resize event
-            window.dispatchEvent(new Event('resize'));
-        }
-    }
-    
-    // Rest of the initialization code
-    window.DEBUG_MODE = true; // Enable debug mode for more detailed logging
-    window.jpLog = function(message, type = 'info') {
-        // Only log in debug mode
-        if (window.DEBUG_MODE) {
-            console.log(message);
-        }
-    };
-    
-    // Check if ThreeJS is already loaded by the plugin
-    const isThreeJSAlreadyLoaded = () => {
-        return (
-            typeof THREE !== 'undefined' || 
-            typeof window.THREE !== 'undefined' ||
-            document.querySelector('script[src*="three.module.js"]') !== null
-        );
-    };
-    
-    // Log ThreeJS loading status
-    console.log('ThreeJS status:', isThreeJSAlreadyLoaded() ? 'Already loaded by plugin' : 'Not yet loaded');
-    
-    // Function to find the Jackalope game container, searching through various possible elements
-    function findJackalopeContainer() {
-        // Try specific selectors first
-        let container = document.querySelector('.jackalope-planet-canvas-container') || 
-                       document.querySelector('#jackalope-planet-container') || 
-                       document.querySelector('.jackalopes-canvas-container') ||
-                       document.querySelector('canvas.jackalope-render-target');
-        
-        // If no container found, look for any canvas element inside the parent div
-        if (!container) {
-            const parentDiv = document.querySelector('.relative.bg-black.rounded-xl');
-            if (parentDiv) {
-                const canvas = parentDiv.querySelector('canvas');
-                if (canvas) {
-                    console.log('Found canvas in parent div');
-                    return canvas;
-                }
-                
-                // If still no canvas, use the parent div itself as fallback
-                console.log('Using parent div as fallback container');
-                return parentDiv;
-            }
-        }
-        
-        return container;
-    }
-    
-    // CRITICAL FIX: Ensure keyboard events are properly captured
-    function setupGlobalKeyboardCapture() {
-        // Track game container focus state
-        let gameHasFocus = false;
-        const jpContainer = document.getElementById('jackalope-planet-container');
-        
-        if (jpContainer) {
-            // Add event listeners to track focus
-            jpContainer.addEventListener('click', () => {
-                gameHasFocus = true;
-                console.log('Game area clicked - focus acquired');
-                
-                // Force player state diagnosis on click
-                if (window.game && window.game.diagnosePlayerState) {
-                    setTimeout(() => {
-                        window.game.diagnosePlayerState(true); // Force fix
-                    }, 100);
-                }
-            });
-            
-            document.body.addEventListener('click', (e) => {
-                // Check if click was outside game area
-                if (!jpContainer.contains(e.target)) {
-                    gameHasFocus = false;
-                    console.log('Clicked outside game area - focus lost');
-                }
-            });
-            
-            // CRITICAL FIX: Global window-level keydown and keyup handlers
-            // These will work even when the canvas doesn't have focus
-            window.addEventListener('keydown', (e) => {
-                // Update global keyboard state
-                window.keyboardState = window.keyboardState || {};
-                window.keyboardState[e.code] = true;
-                
-                // Force key state sync in game, even without focus
-                if (window.game && window.game.inputManager) {
-                    const im = window.game.inputManager;
-                    
-                    // Handle WASD keys
-                    if (e.code === 'KeyW') im.keys.w = true;
-                    if (e.code === 'KeyA') im.keys.a = true;
-                    if (e.code === 'KeyS') im.keys.s = true;
-                    if (e.code === 'KeyD') im.keys.d = true;
-                    if (e.code === 'Space') im.keys.space = true;
-                    
-                    // Update movement flags
-                    im.moveForward = im.keys.w;
-                    im.moveBackward = im.keys.s;
-                    im.moveLeft = im.keys.a;
-                    im.moveRight = im.keys.d;
-                    
-                    if (!gameHasFocus && (e.code === 'KeyW' || e.code === 'KeyA' || e.code === 'KeyS' || e.code === 'KeyD')) {
-                        console.log(`Key ${e.code} pressed while game doesn't have focus - forcing state update`);
-                    }
-                }
-            });
-            
-            window.addEventListener('keyup', (e) => {
-                // Update global keyboard state
-                window.keyboardState = window.keyboardState || {};
-                window.keyboardState[e.code] = false;
-                
-                // Force key state sync in game, even without focus
-                if (window.game && window.game.inputManager) {
-                    const im = window.game.inputManager;
-                    
-                    // Handle WASD keys
-                    if (e.code === 'KeyW') im.keys.w = false;
-                    if (e.code === 'KeyA') im.keys.a = false;
-                    if (e.code === 'KeyS') im.keys.s = false;
-                    if (e.code === 'KeyD') im.keys.d = false;
-                    if (e.code === 'Space') im.keys.space = false;
-                    
-                    // Update movement flags
-                    im.moveForward = im.keys.w;
-                    im.moveBackward = im.keys.s;
-                    im.moveLeft = im.keys.a;
-                    im.moveRight = im.keys.d;
-                }
-            });
-        }
-    }
-    
-    // Add debugging tools and initialize game
-    const jpContainer = document.getElementById('jackalope-planet-container');
-    if (jpContainer) {
-        // Setup key debugging overlay
-        const keyDebug = document.createElement('div');
-        keyDebug.style.position = 'fixed';
-        keyDebug.style.bottom = '10px';
-        keyDebug.style.right = '10px';
-        keyDebug.style.backgroundColor = 'rgba(0,0,0,0.7)';
-        keyDebug.style.color = 'white';
-        keyDebug.style.padding = '10px';
-        keyDebug.style.fontFamily = 'monospace';
-        keyDebug.style.fontSize = '12px';
-        keyDebug.style.zIndex = '9999';
-        keyDebug.innerHTML = 'Key Debug: Initializing...';
-        document.body.appendChild(keyDebug);
-        
-        // Setup global keyboard state for debugging
-        window.keyboardState = {};
-        document.addEventListener('keydown', (e) => {
-            window.keyboardState[e.code] = true;
-            updateKeyDebug();
-        });
-        document.addEventListener('keyup', (e) => {
-            window.keyboardState[e.code] = false;
-            updateKeyDebug();
-        });
-        
-        // Update key debug display
-        function updateKeyDebug() {
-            const wasd = {
-                'KeyW': window.keyboardState['KeyW'] === true,
-                'KeyA': window.keyboardState['KeyA'] === true,
-                'KeyS': window.keyboardState['KeyS'] === true,
-                'KeyD': window.keyboardState['KeyD'] === true,
-                'Space': window.keyboardState['Space'] === true
-            };
-            
-            keyDebug.innerHTML = `Key Debug: W:${wasd.KeyW ? '✅' : '❌'} A:${wasd.KeyA ? '✅' : '❌'} S:${wasd.KeyS ? '✅' : '❌'} D:${wasd.KeyD ? '✅' : '❌'} Space:${wasd.Space ? '✅' : '❌'}`;
-            
-            // If game exists, compare with input manager state
-            if (window.game && window.game.inputManager) {
-                const im = window.game.inputManager;
-                keyDebug.innerHTML += `<br>InputMgr: W:${im.keys.w ? '✅' : '❌'} A:${im.keys.a ? '✅' : '❌'} S:${im.keys.s ? '✅' : '❌'} D:${im.keys.d ? '✅' : '❌'} Space:${im.keys.space ? '✅' : '❌'}`;
-                
-                // If there's a mismatch, add synchronization button
-                const hasKeyMismatch = (wasd.KeyW !== im.keys.w) || 
-                                      (wasd.KeyA !== im.keys.a) || 
-                                      (wasd.KeyS !== im.keys.s) || 
-                                      (wasd.KeyD !== im.keys.d) || 
-                                      (wasd.Space !== im.keys.space);
-                
-                if (hasKeyMismatch) {
-                    if (!keyDebug.querySelector('.sync-btn')) {
-                        const syncBtn = document.createElement('button');
-                        syncBtn.innerText = 'Sync Keys';
-                        syncBtn.className = 'sync-btn';
-                        syncBtn.style.marginTop = '5px';
-                        syncBtn.style.padding = '2px 5px';
-                        syncBtn.style.backgroundColor = '#f00';
-                        syncBtn.style.color = 'white';
-                        syncBtn.style.border = 'none';
-                        syncBtn.style.borderRadius = '3px';
-                        syncBtn.style.cursor = 'pointer';
-                        
-                        syncBtn.addEventListener('click', () => {
-                            // Force sync keyboard state with input manager
-                            if (window.game && window.game.inputManager) {
-                                const im = window.game.inputManager;
-                                im.keys.w = window.keyboardState['KeyW'] === true;
-                                im.keys.a = window.keyboardState['KeyA'] === true;
-                                im.keys.s = window.keyboardState['KeyS'] === true;
-                                im.keys.d = window.keyboardState['KeyD'] === true;
-                                im.keys.space = window.keyboardState['Space'] === true;
-                                
-                                im.moveForward = im.keys.w;
-                                im.moveBackward = im.keys.s;
-                                im.moveLeft = im.keys.a;
-                                im.moveRight = im.keys.d;
-                                
-                                updateKeyDebug();
-                                
-                                // Run diagnostics with force fix
-                                if (window.game.diagnosePlayerState) {
-                                    window.game.diagnosePlayerState(true);
-                                }
-                            }
-                        });
-                        
-                        keyDebug.appendChild(syncBtn);
-                    }
-                } else if (keyDebug.querySelector('.sync-btn')) {
-                    keyDebug.querySelector('.sync-btn').remove();
-                }
-            }
-        }
-        
-        // Update every 100ms to ensure we see the current state
-        setInterval(updateKeyDebug, 100);
-        
-        // Initialize the game, but only if not already initialized by the plugin
-        try {
-            // Check if the game is already initialized by the plugin
-            if (!window.game) {
-                if (typeof JackalopeGame === 'function') {
-                    console.log('Creating new JackalopeGame instance from theme');
-                    window.game = new JackalopeGame(jpContainer.id);
-                    console.log('Jackalope Planet game initialized successfully from theme');
-                } else {
-                    console.log('JackalopeGame constructor not found - waiting for plugin to initialize it');
-                    
-                    // Set up an observer to detect when the plugin initializes the game
-                    const gameCheckInterval = setInterval(() => {
-                        if (window.game) {
-                            console.log('Game object detected (initialized by plugin)');
-                            setupGlobalKeyboardCapture();
-                            clearInterval(gameCheckInterval);
+                        if (el.dataset.originalZIndex) {
+                            el.style.zIndex = el.dataset.originalZIndex;
                         }
-                    }, 500);
+                    });
                     
-                    // Stop checking after 10 seconds to prevent endless loop
-                    setTimeout(() => {
-                        clearInterval(gameCheckInterval);
-                        console.warn('Gave up waiting for plugin to initialize game');
-                    }, 10000);
-                }
-            } else {
-                console.log('Game already initialized by plugin, skipping theme initialization');
+                    // Remove temporary style
+                    const tempStyle = document.getElementById('temp-fullscreen-fix');
+                    if (tempStyle) {
+                        tempStyle.remove();
+                    }
+                    
+                    // Trigger resize
+                    window.dispatchEvent(new Event('resize'));
+                });
             }
-            
-            // Set up global keyboard capture (will work regardless of which initialization method is used)
-            setupGlobalKeyboardCapture();
-            
-            // Add help button
-            const helpBtn = document.createElement('button');
-            helpBtn.innerText = 'Game Help';
-            helpBtn.style.position = 'fixed';
-            helpBtn.style.top = '10px';
-            helpBtn.style.right = '10px';
-            helpBtn.style.padding = '5px 10px';
-            helpBtn.style.backgroundColor = '#335';
-            helpBtn.style.color = 'white';
-            helpBtn.style.border = 'none';
-            helpBtn.style.borderRadius = '3px';
-            helpBtn.style.cursor = 'pointer';
-            helpBtn.style.zIndex = '9999';
-            
-            helpBtn.addEventListener('click', () => {
-                const helpText = document.createElement('div');
-                helpText.style.position = 'fixed';
-                helpText.style.top = '50%';
-                helpText.style.left = '50%';
-                helpText.style.transform = 'translate(-50%, -50%)';
-                helpText.style.backgroundColor = 'rgba(0,0,0,0.85)';
-                helpText.style.color = 'white';
-                helpText.style.padding = '20px';
-                helpText.style.fontFamily = 'Arial, sans-serif';
-                helpText.style.borderRadius = '5px';
-                helpText.style.zIndex = '10000';
-                helpText.style.maxWidth = '80%';
-                helpText.style.maxHeight = '80%';
-                helpText.style.overflow = 'auto';
+        });
+        
+        // Handle ESC key and other ways of exiting fullscreen
+        document.addEventListener('fullscreenchange', function() {
+            if (!document.fullscreenElement && container.classList.contains('game-fullscreen')) {
+                container.classList.remove('game-fullscreen');
+                fullscreenBtn.classList.remove('exit');
                 
-                helpText.innerHTML = `
-                    <h2>Jackalope Planet Controls</h2>
-                    <p><b>Basic Controls:</b></p>
-                    <ul>
-                        <li>W, A, S, D - Movement</li>
-                        <li>Space - Jump</li>
-                        <li>Mouse - Look around/orbit camera</li>
-                        <li>Click - Shoot flamethrower (first-person only)</li>
-                        <li>T - Toggle between first/third person</li>
-                    </ul>
-                    
-                    <p><b>Admin Controls:</b></p>
-                    <ul>
-                        <li>G - Toggle God Mode</li>
-                        <li>1 - Spawn Jackalope (in God Mode)</li>
-                        <li>2 - Spawn Merc (in God Mode)</li>
-                        <li>D - Run diagnostics (helps fix control issues)</li>
-                        <li>P - Show player info</li>
-                    </ul>
-                    
-                    <p><b>Troubleshooting:</b></p>
-                    <ul>
-                        <li>If controls stop working, click the game area</li>
-                        <li>Press 'D' to run diagnostics and fix issues</li>
-                        <li>Watch the key debug overlay in bottom right</li>
-                        <li>Click "Sync Keys" if there's a mismatch</li>
-                    </ul>
-                    
-                    <button id="close-help" style="margin-top: 10px; padding: 5px 10px; background-color: #335; color: white; border: none; border-radius: 3px; cursor: pointer;">Close</button>
+                // Update button
+                fullscreenBtn.innerHTML = `
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+                    </svg>
+                    <span>Fullscreen</span>
                 `;
                 
-                document.body.appendChild(helpText);
-                
-                document.getElementById('close-help').addEventListener('click', () => {
-                    helpText.remove();
+                // Restore UI elements
+                const uiElements = document.querySelectorAll('.jackalope-ui-element');
+                uiElements.forEach(el => {
+                    if (el.dataset.originalPosition) {
+                        el.style.position = el.dataset.originalPosition;
+                    }
+                    if (el.dataset.originalZIndex) {
+                        el.style.zIndex = el.dataset.originalZIndex;
+                    }
                 });
-            });
-            
-            document.body.appendChild(helpBtn);
-            
-        } catch (error) {
-            console.error('Failed to initialize Jackalope Planet game:', error);
-        }
+                
+                // Remove temporary style
+                const tempStyle = document.getElementById('temp-fullscreen-fix');
+                if (tempStyle) {
+                    tempStyle.remove();
+                }
+                
+                // Trigger resize
+                window.dispatchEvent(new Event('resize'));
+            }
+        });
     }
+    
+    // Initialize UI containment
+    setupUIContainment();
 });
 </script>
