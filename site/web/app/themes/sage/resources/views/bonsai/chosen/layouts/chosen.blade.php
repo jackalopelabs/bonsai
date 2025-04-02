@@ -2,20 +2,6 @@
 <html @php(language_attributes()) x-data="globalData" class="relative h-screen">
     <!-- Hero Background Images -->
     <div class="absolute inset-0 z-0">
-        @production
-        <img src="{{ asset('app/themes/sage/public/build/assets/chosen_hero_03-BfIE_5Wa.webp') }}"
-                alt="Background Light"
-                class="w-full h-full object-cover object-top opacity-100"
-                style="display: none;"
-                x-bind:style="!darkMode ? 'display: block;' : 'display: none;'"
-        />
-        <img src="{{ asset('app/themes/sage/public/build/assets/chosen_hero_01-zE4Fb5r_.webp') }}" 
-                alt="Background Dark" 
-                class="w-full h-full object-cover object-top opacity-100"
-                style="display: block;"
-                x-bind:style="darkMode ? 'display: block;' : 'display: none;'"
-        />
-        @else
         <img src="{{ Vite::asset('resources/images/chosen_hero_03.webp') }}"
                 alt="Background Light"
                 class="w-full h-full object-cover object-top opacity-100"
@@ -28,7 +14,6 @@
                 style="display: block;"
                 x-bind:style="darkMode ? 'display: block;' : 'display: none;'"
         />
-        @endproduction
     </div>
 
     <head>
