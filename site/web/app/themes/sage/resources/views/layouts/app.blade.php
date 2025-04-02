@@ -6,7 +6,12 @@
     @php(do_action('get_header'))
     @php(wp_head())
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @production
+      <link rel="stylesheet" href="{{ asset('app/themes/sage/public/build/assets/app-BlU6k3Uc.css') }}">
+      <script type="module" src="{{ asset('app/themes/sage/public/build/assets/app-B6ltmGRv.js') }}" defer></script>
+    @else
+      @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @endproduction
   </head>
 
   <body @php(body_class())>

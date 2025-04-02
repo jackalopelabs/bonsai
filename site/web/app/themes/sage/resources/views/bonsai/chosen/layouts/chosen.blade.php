@@ -2,6 +2,20 @@
 <html @php(language_attributes()) x-data="globalData" class="relative h-screen">
     <!-- Hero Background Images -->
     <div class="absolute inset-0 z-0">
+        @production
+        <img src="{{ asset('app/themes/sage/public/build/assets/chosen_hero_03-BfIE_5Wa.webp') }}"
+                alt="Background Light"
+                class="w-full h-full object-cover object-top opacity-100"
+                style="display: none;"
+                x-bind:style="!darkMode ? 'display: block;' : 'display: none;'"
+        />
+        <img src="{{ asset('app/themes/sage/public/build/assets/chosen_hero_01-zE4Fb5r_.webp') }}" 
+                alt="Background Dark" 
+                class="w-full h-full object-cover object-top opacity-100"
+                style="display: block;"
+                x-bind:style="darkMode ? 'display: block;' : 'display: none;'"
+        />
+        @else
         <img src="{{ Vite::asset('resources/images/chosen_hero_03.webp') }}"
                 alt="Background Light"
                 class="w-full h-full object-cover object-top opacity-100"
@@ -14,6 +28,7 @@
                 style="display: block;"
                 x-bind:style="darkMode ? 'display: block;' : 'display: none;'"
         />
+        @endproduction
     </div>
 
     <head>
@@ -21,7 +36,13 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         @php(do_action('get_header'))
         @php(wp_head())
+        
+        @production
+        <link rel="stylesheet" href="{{ asset('app/themes/sage/public/build/assets/app-BlU6k3Uc.css') }}">
+        <script type="module" src="{{ asset('app/themes/sage/public/build/assets/app-B6ltmGRv.js') }}" defer></script>
+        @else
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @endproduction
     </head>
 
     <body @php(body_class('transition-colors duration-200 p-0 m-0 h-screen')) 
