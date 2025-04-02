@@ -74,8 +74,224 @@
 </div>
 
 <script>
-// Initialize the Jackalope Planet game
+// Force fullscreen handling with direct canvas manipulation
 document.addEventListener('DOMContentLoaded', () => {
+    // Function to find game container
+    function findGameElement() {
+        // Try specific selectors in order of likelihood
+        return document.querySelector('#jackalope-planet-container') || 
+               document.querySelector('.jackalope-planet-canvas-container') || 
+               document.querySelector('.jackalopes-canvas-container') ||
+               document.querySelector('canvas.jackalope-render-target') ||
+               document.querySelector('.relative.bg-black.rounded-xl canvas') ||
+               document.querySelector('.relative.bg-black.rounded-xl');
+    }
+    
+    // Direct fullscreen handler
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    if (fullscreenBtn) {
+        // Force inline styles to ensure fullscreen works correctly
+        const fullscreenCSS = document.createElement('style');
+        fullscreenCSS.innerHTML = `
+            .jp-fullscreen {
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100vw !important;
+                height: 100vh !important;
+                max-width: 100vw !important;
+                max-height: 100vh !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                z-index: 9999 !important;
+                background-color: #000 !important;
+                display: block !important;
+                overflow: hidden !important;
+            }
+            
+            .jp-fullscreen canvas {
+                width: 100vw !important;
+                height: 100vh !important;
+                display: block !important;
+                max-width: none !important;
+                max-height: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            
+            /* Hide any UI that might appear over the game */
+            .jp-fullscreen ~ * {
+                display: none !important;
+            }
+            
+            .jp-fullscreen * {
+                overflow: visible !important;
+            }
+            
+            #fullscreen-btn.exit {
+                position: fixed !important;
+                top: 10px !important;
+                right: 10px !important;
+                z-index: 10000 !important;
+            }
+        `;
+        document.head.appendChild(fullscreenCSS);
+        
+        fullscreenBtn.addEventListener('click', () => {
+            const gameElement = findGameElement();
+            
+            if (!gameElement) {
+                console.error('Could not find game container for fullscreen');
+                return;
+            }
+            
+            console.log('Found game element:', gameElement);
+            
+            if (!document.fullscreenElement) {
+                // Enter fullscreen
+                console.log('Entering fullscreen mode');
+                
+                try {
+                    // First try to go fullscreen
+                    gameElement.requestFullscreen()
+                        .then(() => {
+                            console.log('Fullscreen entered successfully');
+                            
+                            // Apply fullscreen specific styling
+                            gameElement.classList.add('jp-fullscreen');
+                            fullscreenBtn.classList.add('exit');
+                            
+                            // Update button
+                            fullscreenBtn.innerHTML = `
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20H5m0 0v-4m0 4l5-5m11 5l-5-5m5 5v-4m0 4h-4M4 8V4m0 0h4M4 4l5 5"></path>
+                                </svg>
+                                <span>Exit Fullscreen</span>
+                            `;
+                            
+                            // Find and resize the canvas
+                            const canvas = gameElement.querySelector('canvas') || gameElement;
+                            
+                            // Force dimension update
+                            setTimeout(() => {
+                                canvas.style.width = '100vw';
+                                canvas.style.height = '100vh';
+                                
+                                // Trigger resize events for the game
+                                if (window.game) {
+                                    console.log('Triggering game resize');
+                                    // Try multiple resize methods
+                                    if (window.game.resize) window.game.resize();
+                                    if (window.game.onWindowResize) window.game.onWindowResize();
+                                    if (window.game.renderer) {
+                                        window.game.renderer.setSize(window.innerWidth, window.innerHeight);
+                                        if (window.game.camera) {
+                                            window.game.camera.aspect = window.innerWidth / window.innerHeight;
+                                            window.game.camera.updateProjectionMatrix();
+                                        }
+                                    }
+                                }
+                                
+                                // General resize event
+                                window.dispatchEvent(new Event('resize'));
+                            }, 100);
+                        })
+                        .catch(err => {
+                            console.error('Error entering fullscreen:', err);
+                            
+                            // Fallback approach - apply fullscreen-like styling without actual fullscreen
+                            gameElement.classList.add('jp-fullscreen');
+                            fullscreenBtn.classList.add('exit');
+                            
+                            fullscreenBtn.innerHTML = `
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20H5m0 0v-4m0 4l5-5m11 5l-5-5m5 5v-4m0 4h-4M4 8V4m0 0h4M4 4l5 5"></path>
+                                </svg>
+                                <span>Exit Fullscreen</span>
+                            `;
+                        });
+                } catch (e) {
+                    console.error('Could not request fullscreen:', e);
+                }
+            } else {
+                // Exit fullscreen
+                console.log('Exiting fullscreen mode');
+                
+                try {
+                    document.exitFullscreen()
+                        .then(() => {
+                            console.log('Exited fullscreen successfully');
+                        })
+                        .catch(err => {
+                            console.error('Error exiting fullscreen:', err);
+                        })
+                        .finally(() => {
+                            // Always clean up whether or not exitFullscreen succeeds
+                            resetFromFullscreen(gameElement);
+                        });
+                } catch (e) {
+                    console.error('Error during exitFullscreen():', e);
+                    // Still clean up even if there's an error
+                    resetFromFullscreen(gameElement);
+                }
+            }
+        });
+        
+        // Handle esc key and other ways of exiting fullscreen
+        document.addEventListener('fullscreenchange', () => {
+            const gameElement = findGameElement();
+            
+            if (!document.fullscreenElement && gameElement) {
+                resetFromFullscreen(gameElement);
+            }
+        });
+        
+        function resetFromFullscreen(element) {
+            console.log('Cleaning up fullscreen styles');
+            
+            // Remove fullscreen classes
+            element.classList.remove('jp-fullscreen');
+            fullscreenBtn.classList.remove('exit');
+            
+            // Reset button
+            fullscreenBtn.innerHTML = `
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+                </svg>
+                <span>Fullscreen</span>
+            `;
+            
+            // Find and reset the canvas
+            const canvas = element.querySelector('canvas') || element;
+            canvas.style.width = '';
+            canvas.style.height = '';
+            
+            // Trigger resize events for the game
+            if (window.game) {
+                // Try multiple resize methods
+                if (window.game.resize) window.game.resize();
+                if (window.game.onWindowResize) window.game.onWindowResize();
+                if (window.game.renderer) {
+                    // Reset the renderer size to the container size
+                    const container = document.querySelector('.relative.bg-black.rounded-xl');
+                    if (container) {
+                        const width = container.clientWidth;
+                        const height = container.clientHeight;
+                        window.game.renderer.setSize(width, height);
+                        if (window.game.camera) {
+                            window.game.camera.aspect = width / height;
+                            window.game.camera.updateProjectionMatrix();
+                        }
+                    }
+                }
+            }
+            
+            // General resize event
+            window.dispatchEvent(new Event('resize'));
+        }
+    }
+    
+    // Rest of the initialization code
     window.DEBUG_MODE = true; // Enable debug mode for more detailed logging
     window.jpLog = function(message, type = 'info') {
         // Only log in debug mode
@@ -202,180 +418,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     im.moveBackward = im.keys.s;
                     im.moveLeft = im.keys.a;
                     im.moveRight = im.keys.d;
-                }
-            });
-        }
-    }
-    
-    // Restore fullscreen functionality
-    const fullscreenBtn = document.getElementById('fullscreen-btn');
-    
-    // Find the game container - try multiple possible selectors
-    const gameContainer = findJackalopeContainer();
-    
-    console.log('Found game container for fullscreen:', gameContainer ? 'Yes' : 'No');
-    
-    if (fullscreenBtn && gameContainer) {
-        // Store a reference to the game container that will update if found later
-        let dynamicGameContainer = gameContainer;
-        
-        // Watch for changes to the DOM that might add the game container
-        const gameContainerObserver = new MutationObserver((mutations) => {
-            // Only look for the container if we haven't found it yet
-            if (!dynamicGameContainer) {
-                console.log('DOM changed, searching for game container again');
-                dynamicGameContainer = findJackalopeContainer();
-                
-                if (dynamicGameContainer) {
-                    console.log('Found game container after DOM change');
-                    gameContainerObserver.disconnect();
-                }
-            }
-        });
-        
-        // Start observing for the game container
-        gameContainerObserver.observe(document.body, { 
-            childList: true, 
-            subtree: true 
-        });
-        
-        // Add a click handler for the fullscreen button
-        fullscreenBtn.addEventListener('click', () => {
-            console.log('Fullscreen button clicked');
-            
-            if (!document.fullscreenElement) {
-                // Request fullscreen on the container
-                console.log('Requesting fullscreen for element:', dynamicGameContainer);
-                
-                try {
-                    dynamicGameContainer.requestFullscreen().then(() => {
-                        // Update button text and icon
-                        fullscreenBtn.innerHTML = `
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20H5m0 0v-4m0 4l5-5m11 5l-5-5m5 5v-4m0 4h-4M4 8V4m0 0h4M4 4l5 5"></path>
-                            </svg>
-                            <span>Exit Fullscreen</span>
-                        `;
-                    }).catch(err => {
-                        console.error('Error attempting to enable fullscreen:', err);
-                    });
-                } catch (err) {
-                    console.error('Exception when trying to enter fullscreen:', err);
-                    
-                    // Try with parent element as fallback
-                    try {
-                        console.log('Trying with parent element as fallback');
-                        const parentElement = dynamicGameContainer.parentElement;
-                        if (parentElement) {
-                            parentElement.requestFullscreen();
-                        }
-                    } catch (fallbackErr) {
-                        console.error('Fallback fullscreen also failed:', fallbackErr);
-                    }
-                }
-            } else {
-                // Exit fullscreen
-                document.exitFullscreen().then(() => {
-                    // Reset button text and icon
-                    fullscreenBtn.innerHTML = `
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
-                        </svg>
-                        <span>Fullscreen</span>
-                    `;
-                }).catch(err => {
-                    console.error('Error attempting to exit fullscreen:', err);
-                });
-            }
-        });
-    
-        // Handle fullscreen changes from other sources (like pressing Esc)
-        document.addEventListener('fullscreenchange', () => {
-            if (!document.fullscreenElement) {
-                fullscreenBtn.innerHTML = `
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
-                    </svg>
-                    <span>Fullscreen</span>
-                `;
-            }
-        });
-    } else {
-        console.error('Could not find fullscreen button or game container', { 
-            fullscreenBtn: !!fullscreenBtn, 
-            gameContainer: !!gameContainer 
-        });
-        
-        // Add event listener directly to the button regardless
-        if (fullscreenBtn) {
-            // Set up a mutation observer to watch for the container being added
-            let dynamicGameContainer = null;
-            
-            const gameContainerObserver = new MutationObserver((mutations) => {
-                if (!dynamicGameContainer) {
-                    dynamicGameContainer = findJackalopeContainer();
-                    if (dynamicGameContainer) {
-                        console.log('Found game container after DOM change (fallback case)');
-                    }
-                }
-            });
-            
-            // Start observing
-            gameContainerObserver.observe(document.body, { 
-                childList: true, 
-                subtree: true 
-            });
-            
-            fullscreenBtn.addEventListener('click', () => {
-                console.log('Fullscreen button clicked, finding container dynamically');
-                
-                // Use the observed container if available, or try to find it again
-                const containerToUse = dynamicGameContainer || 
-                                      findJackalopeContainer() || 
-                                      document.querySelector('.relative.bg-black.rounded-xl') ||
-                                      document.querySelector('canvas');
-                
-                if (containerToUse) {
-                    try {
-                        containerToUse.requestFullscreen().then(() => {
-                            // Update button text and icon when successful
-                            fullscreenBtn.innerHTML = `
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20H5m0 0v-4m0 4l5-5m11 5l-5-5m5 5v-4m0 4h-4M4 8V4m0 0h4M4 4l5 5"></path>
-                                </svg>
-                                <span>Exit Fullscreen</span>
-                            `;
-                        }).catch(err => {
-                            console.error('Error in fallback fullscreen:', err);
-                            
-                            // Try parent as last resort
-                            if (containerToUse.parentElement) {
-                                containerToUse.parentElement.requestFullscreen().catch(
-                                    e => console.error('Parent fallback also failed:', e)
-                                );
-                            }
-                        });
-                    } catch (err) {
-                        console.error('Dynamic fullscreen attempt failed:', err);
-                    }
-                } else {
-                    // Last resort: try to fullscreen the game's parent div
-                    const gameParent = document.querySelector('.relative.bg-black.rounded-xl');
-                    if (gameParent) {
-                        gameParent.requestFullscreen().catch(e => console.error('Last resort fallback failed:', e));
-                    }
-                }
-            });
-            
-            // Handle fullscreen exit the same way as before
-            document.addEventListener('fullscreenchange', () => {
-                if (!document.fullscreenElement) {
-                    fullscreenBtn.innerHTML = `
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
-                        </svg>
-                        <span>Fullscreen</span>
-                    `;
                 }
             });
         }
