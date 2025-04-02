@@ -177,6 +177,13 @@ body > .jackalope-ui-element {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Initializing Jackalope UI containment and fullscreen handler');
     
+    // Prevent spacebar from scrolling the page
+    document.addEventListener('keydown', function(e) {
+        if (e.code === 'Space' && e.target === document.body) {
+            e.preventDefault();
+        }
+    });
+    
     // Function to find game container - try multiple possible selectors
     function findGameContainer() {
         return document.querySelector('.jackalopes-game-container') || 
