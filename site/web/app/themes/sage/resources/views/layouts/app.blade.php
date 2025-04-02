@@ -6,12 +6,8 @@
     @php(do_action('get_header'))
     @php(wp_head())
 
-    @production
-      <link rel="stylesheet" href="{{ asset('app/themes/sage/public/build/assets/app-BlU6k3Uc.css') }}">
-      <script type="module" src="{{ asset('app/themes/sage/public/build/assets/app-B6ltmGRv.js') }}" defer></script>
-    @else
-      @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @endproduction
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @include('bonsai.components.chosen.analytics')
   </head>
 
   <body @php(body_class())>

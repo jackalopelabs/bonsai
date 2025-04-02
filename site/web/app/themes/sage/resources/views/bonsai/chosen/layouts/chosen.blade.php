@@ -22,6 +22,7 @@
         @php(do_action('get_header'))
         @php(wp_head())
         @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @include('bonsai.components.chosen.analytics')
     </head>
 
     <body @php(body_class('transition-colors duration-200 p-0 m-0 h-screen')) 
