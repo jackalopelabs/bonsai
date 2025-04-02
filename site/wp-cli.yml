@@ -7,4 +7,4 @@ server:
 @staging:
   ssh: web@staging.games.bonsai.so/srv/www/bonsai.so/current
 @production:
-  ssh: web@bonsai.so/srv/www/bonsai.so/current
+  ssh: web@games.bonsai.so/srv/www/bonsai.so/current

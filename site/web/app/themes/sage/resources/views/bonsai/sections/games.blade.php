@@ -14,7 +14,7 @@
             </p>
         </div>
         
-        <div class="relative bg-black rounded-xl shadow-xl overflow-hidden" style="height: 70vh; min-height: 500px;">
+        <div class="relative bg-black rounded-xl shadow-xl overflow-hidden">
             <div class="absolute top-4 right-4 z-10">
                 <button id="fullscreen-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -23,7 +23,7 @@
                     <span>Fullscreen</span>
                 </button>
             </div>
-            {!! do_shortcode('[jackalopes width="800px" height="500px" fullscreen="true"]') !!}
+            {!! do_shortcode('[jackalopes disable_threejs="true"]') !!}
         </div>
         
         <div class="mt-12 grid md:grid-cols-2 gap-8">
@@ -83,6 +83,45 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log(message);
         }
     };
+    
+    // Check if ThreeJS is already loaded by the plugin
+    const isThreeJSAlreadyLoaded = () => {
+        return (
+            typeof THREE !== 'undefined' || 
+            typeof window.THREE !== 'undefined' ||
+            document.querySelector('script[src*="three.module.js"]') !== null
+        );
+    };
+    
+    // Log ThreeJS loading status
+    console.log('ThreeJS status:', isThreeJSAlreadyLoaded() ? 'Already loaded by plugin' : 'Not yet loaded');
+    
+    // Function to find the Jackalope game container, searching through various possible elements
+    function findJackalopeContainer() {
+        // Try specific selectors first
+        let container = document.querySelector('.jackalope-planet-canvas-container') || 
+                       document.querySelector('#jackalope-planet-container') || 
+                       document.querySelector('.jackalopes-canvas-container') ||
+                       document.querySelector('canvas.jackalope-render-target');
+        
+        // If no container found, look for any canvas element inside the parent div
+        if (!container) {
+            const parentDiv = document.querySelector('.relative.bg-black.rounded-xl');
+            if (parentDiv) {
+                const canvas = parentDiv.querySelector('canvas');
+                if (canvas) {
+                    console.log('Found canvas in parent div');
+                    return canvas;
+                }
+                
+                // If still no canvas, use the parent div itself as fallback
+                console.log('Using parent div as fallback container');
+                return parentDiv;
+            }
+        }
+        
+        return container;
+    }
     
     // CRITICAL FIX: Ensure keyboard events are properly captured
     function setupGlobalKeyboardCapture() {
@@ -170,23 +209,72 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Restore fullscreen functionality
     const fullscreenBtn = document.getElementById('fullscreen-btn');
-    const gameContainer = document.querySelector('.jackalope-planet-canvas-container');
+    
+    // Find the game container - try multiple possible selectors
+    const gameContainer = findJackalopeContainer();
+    
+    console.log('Found game container for fullscreen:', gameContainer ? 'Yes' : 'No');
     
     if (fullscreenBtn && gameContainer) {
-        const toggleFullscreen = () => {
+        // Store a reference to the game container that will update if found later
+        let dynamicGameContainer = gameContainer;
+        
+        // Watch for changes to the DOM that might add the game container
+        const gameContainerObserver = new MutationObserver((mutations) => {
+            // Only look for the container if we haven't found it yet
+            if (!dynamicGameContainer) {
+                console.log('DOM changed, searching for game container again');
+                dynamicGameContainer = findJackalopeContainer();
+                
+                if (dynamicGameContainer) {
+                    console.log('Found game container after DOM change');
+                    gameContainerObserver.disconnect();
+                }
+            }
+        });
+        
+        // Start observing for the game container
+        gameContainerObserver.observe(document.body, { 
+            childList: true, 
+            subtree: true 
+        });
+        
+        // Add a click handler for the fullscreen button
+        fullscreenBtn.addEventListener('click', () => {
+            console.log('Fullscreen button clicked');
+            
             if (!document.fullscreenElement) {
-                gameContainer.requestFullscreen().then(() => {
-                    // Update button text and icon
-                    fullscreenBtn.innerHTML = `
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20H5m0 0v-4m0 4l5-5m11 5l-5-5m5 5v-4m0 4h-4M4 8V4m0 0h4M4 4l5 5"></path>
-                        </svg>
-                        <span>Exit Fullscreen</span>
-                    `;
-                }).catch(err => {
-                    console.error('Error attempting to enable fullscreen:', err);
-                });
+                // Request fullscreen on the container
+                console.log('Requesting fullscreen for element:', dynamicGameContainer);
+                
+                try {
+                    dynamicGameContainer.requestFullscreen().then(() => {
+                        // Update button text and icon
+                        fullscreenBtn.innerHTML = `
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20H5m0 0v-4m0 4l5-5m11 5l-5-5m5 5v-4m0 4h-4M4 8V4m0 0h4M4 4l5 5"></path>
+                            </svg>
+                            <span>Exit Fullscreen</span>
+                        `;
+                    }).catch(err => {
+                        console.error('Error attempting to enable fullscreen:', err);
+                    });
+                } catch (err) {
+                    console.error('Exception when trying to enter fullscreen:', err);
+                    
+                    // Try with parent element as fallback
+                    try {
+                        console.log('Trying with parent element as fallback');
+                        const parentElement = dynamicGameContainer.parentElement;
+                        if (parentElement) {
+                            parentElement.requestFullscreen();
+                        }
+                    } catch (fallbackErr) {
+                        console.error('Fallback fullscreen also failed:', fallbackErr);
+                    }
+                }
             } else {
+                // Exit fullscreen
                 document.exitFullscreen().then(() => {
                     // Reset button text and icon
                     fullscreenBtn.innerHTML = `
@@ -199,9 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.error('Error attempting to exit fullscreen:', err);
                 });
             }
-        };
-    
-        fullscreenBtn.addEventListener('click', toggleFullscreen);
+        });
     
         // Handle fullscreen changes from other sources (like pressing Esc)
         document.addEventListener('fullscreenchange', () => {
@@ -214,6 +300,85 @@ document.addEventListener('DOMContentLoaded', () => {
                 `;
             }
         });
+    } else {
+        console.error('Could not find fullscreen button or game container', { 
+            fullscreenBtn: !!fullscreenBtn, 
+            gameContainer: !!gameContainer 
+        });
+        
+        // Add event listener directly to the button regardless
+        if (fullscreenBtn) {
+            // Set up a mutation observer to watch for the container being added
+            let dynamicGameContainer = null;
+            
+            const gameContainerObserver = new MutationObserver((mutations) => {
+                if (!dynamicGameContainer) {
+                    dynamicGameContainer = findJackalopeContainer();
+                    if (dynamicGameContainer) {
+                        console.log('Found game container after DOM change (fallback case)');
+                    }
+                }
+            });
+            
+            // Start observing
+            gameContainerObserver.observe(document.body, { 
+                childList: true, 
+                subtree: true 
+            });
+            
+            fullscreenBtn.addEventListener('click', () => {
+                console.log('Fullscreen button clicked, finding container dynamically');
+                
+                // Use the observed container if available, or try to find it again
+                const containerToUse = dynamicGameContainer || 
+                                      findJackalopeContainer() || 
+                                      document.querySelector('.relative.bg-black.rounded-xl') ||
+                                      document.querySelector('canvas');
+                
+                if (containerToUse) {
+                    try {
+                        containerToUse.requestFullscreen().then(() => {
+                            // Update button text and icon when successful
+                            fullscreenBtn.innerHTML = `
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20H5m0 0v-4m0 4l5-5m11 5l-5-5m5 5v-4m0 4h-4M4 8V4m0 0h4M4 4l5 5"></path>
+                                </svg>
+                                <span>Exit Fullscreen</span>
+                            `;
+                        }).catch(err => {
+                            console.error('Error in fallback fullscreen:', err);
+                            
+                            // Try parent as last resort
+                            if (containerToUse.parentElement) {
+                                containerToUse.parentElement.requestFullscreen().catch(
+                                    e => console.error('Parent fallback also failed:', e)
+                                );
+                            }
+                        });
+                    } catch (err) {
+                        console.error('Dynamic fullscreen attempt failed:', err);
+                    }
+                } else {
+                    // Last resort: try to fullscreen the game's parent div
+                    const gameParent = document.querySelector('.relative.bg-black.rounded-xl');
+                    if (gameParent) {
+                        gameParent.requestFullscreen().catch(e => console.error('Last resort fallback failed:', e));
+                    }
+                }
+            });
+            
+            // Handle fullscreen exit the same way as before
+            document.addEventListener('fullscreenchange', () => {
+                if (!document.fullscreenElement) {
+                    fullscreenBtn.innerHTML = `
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+                        </svg>
+                        <span>Fullscreen</span>
+                    `;
+                }
+            });
+        }
     }
     
     // Add debugging tools and initialize game
@@ -316,12 +481,37 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update every 100ms to ensure we see the current state
         setInterval(updateKeyDebug, 100);
         
-        // Initialize the game
+        // Initialize the game, but only if not already initialized by the plugin
         try {
-            window.game = new JackalopeGame(jpContainer.id);
-            console.log('Jackalope Planet game initialized successfully');
+            // Check if the game is already initialized by the plugin
+            if (!window.game) {
+                if (typeof JackalopeGame === 'function') {
+                    console.log('Creating new JackalopeGame instance from theme');
+                    window.game = new JackalopeGame(jpContainer.id);
+                    console.log('Jackalope Planet game initialized successfully from theme');
+                } else {
+                    console.log('JackalopeGame constructor not found - waiting for plugin to initialize it');
+                    
+                    // Set up an observer to detect when the plugin initializes the game
+                    const gameCheckInterval = setInterval(() => {
+                        if (window.game) {
+                            console.log('Game object detected (initialized by plugin)');
+                            setupGlobalKeyboardCapture();
+                            clearInterval(gameCheckInterval);
+                        }
+                    }, 500);
+                    
+                    // Stop checking after 10 seconds to prevent endless loop
+                    setTimeout(() => {
+                        clearInterval(gameCheckInterval);
+                        console.warn('Gave up waiting for plugin to initialize game');
+                    }, 10000);
+                }
+            } else {
+                console.log('Game already initialized by plugin, skipping theme initialization');
+            }
             
-            // Set up global keyboard capture
+            // Set up global keyboard capture (will work regardless of which initialization method is used)
             setupGlobalKeyboardCapture();
             
             // Add help button

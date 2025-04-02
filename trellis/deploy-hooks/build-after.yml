@@ -6,6 +6,11 @@
 # NOTE: this task will fail if Sage theme is not activated at time of deployment.
 #
 ---
+# - name: Run Acorn optimize
+#   command: wp acorn optimize
+#   args:
+#     chdir: "{{ deploy_helper.new_release_path }}"
+# Note: uncomment after initial deployment and database setup
 - name: Run Acorn optimize
   command: wp acorn optimize
   args:

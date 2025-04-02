@@ -7,8 +7,8 @@
 DEVDIR="web/app/uploads/"
 DEVSITE="http://bonsai.test/"
 
-# PRODDIR="web@bonsai.so:/srv/www/bonsai.so/shared/uploads/"
-# PRODSITE="https://bonsai.so"
+PRODDIR="web@games.bonsai.so:/srv/www/bonsai.so/shared/uploads/"
+PRODSITE="https://games.bonsai.so"
 
 STAGDIR="web@staging.games.bonsai.so:/srv/www/bonsai.so/shared/uploads/"
 STAGSITE="http://staging.games.bonsai.so/"

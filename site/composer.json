@@ -41,6 +41,10 @@
             "type": "vcs",
             "url": "git@github.com:jackalopelabs/jackalope-planet.git"
         },
+        "jackalopes-wp": {
+            "type": "vcs",
+            "url": "git@github.com:jackalopelabs/jackalopes-wp.git"
+        },
         "0": {
             "type": "composer",
             "url": "https://wpackagist.org",
@@ -63,7 +67,8 @@
         "wpackagist-theme/twentytwentyfive": "^1.0",
         "jackalopelabs/bonsai-cli": "dev-kanban",
         "jackalopelabs/jackalopes-server": "dev-main",
-        "jackalopelabs/jackalope-planet": "dev-main"
+        "jackalopelabs/jackalope-planet": "dev-main",
+        "jackalopelabs/jackalopes-wp": "dev-main"
     },
     "require-dev": {
         "roave/security-advisories": "dev-latest",
