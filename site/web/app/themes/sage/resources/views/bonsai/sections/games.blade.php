@@ -229,6 +229,63 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    // Patch three.js to properly handle DOM cleanup
+    function patchThreeJsDispose() {
+        // Wait for Three.js to load
+        const checkInterval = setInterval(() => {
+            if (window.THREE) {
+                clearInterval(checkInterval);
+                console.log('THREE.js detected, applying patches');
+                
+                // Patch Object3D dispose to be more robust
+                const originalDispose = window.THREE.Object3D.prototype.dispose;
+                if (originalDispose) {
+                    window.THREE.Object3D.prototype.dispose = function() {
+                        try {
+                            // Call original dispose method safely
+                            return originalDispose.apply(this, arguments);
+                        } catch (e) {
+                            console.warn('Error in THREE.Object3D.dispose, handling gracefully:', e);
+                        }
+                    };
+                }
+                
+                // Add additional protection for scene dispose
+                if (window.THREE.Scene) {
+                    const originalSceneDispose = window.THREE.Scene.prototype.dispose;
+                    window.THREE.Scene.prototype.dispose = function() {
+                        try {
+                            // First remove all children safely
+                            if (this.children && this.children.length) {
+                                // Create a copy of the children array to avoid modification during iteration
+                                const childrenCopy = [...this.children];
+                                childrenCopy.forEach(child => {
+                                    try {
+                                        this.remove(child);
+                                    } catch (e) {
+                                        console.warn('Error removing child from scene:', e);
+                                    }
+                                });
+                            }
+                            
+                            // Then call original dispose method
+                            if (originalSceneDispose) {
+                                return originalSceneDispose.apply(this, arguments);
+                            }
+                        } catch (e) {
+                            console.warn('Error in THREE.Scene.dispose, handling gracefully:', e);
+                        }
+                    };
+                }
+            }
+        }, 500);
+        
+        // Stop checking after 10 seconds
+        setTimeout(() => {
+            clearInterval(checkInterval);
+        }, 10000);
+    }
+    
     // Function to set up containment for a specific container
     function setupUIContainmentForContainer(container) {
         console.log('Setting up UI containment for container:', container);
@@ -473,7 +530,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Initialize UI containment
+    // Initialize patches
+    patchThreeJsDispose();
     setupUIContainment();
 });
 </script>
