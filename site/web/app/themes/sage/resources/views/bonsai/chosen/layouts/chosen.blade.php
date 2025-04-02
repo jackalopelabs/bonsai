@@ -21,13 +21,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         @php(do_action('get_header'))
         @php(wp_head())
-        
-        @production
-        <link rel="stylesheet" href="{{ asset('app/themes/sage/public/build/assets/app-BlU6k3Uc.css') }}">
-        <script type="module" src="{{ asset('app/themes/sage/public/build/assets/app-B6ltmGRv.js') }}" defer></script>
-        @else
         @vite(['resources/css/app.css', 'resources/js/app.js'])
-        @endproduction
     </head>
 
     <body @php(body_class('transition-colors duration-200 p-0 m-0 h-screen')) 
