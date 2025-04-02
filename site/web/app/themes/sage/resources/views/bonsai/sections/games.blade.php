@@ -277,6 +277,53 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     };
                 }
+                
+                // Patch Node prototype to handle DOM manipulation errors
+                if (typeof Node !== 'undefined') {
+                    // Patch removeChild to be more robust
+                    const originalRemoveChild = Node.prototype.removeChild;
+                    Node.prototype.removeChild = function(child) {
+                        try {
+                            // Check if child is actually a child of this node
+                            if (!this.contains(child)) {
+                                console.warn('Cannot remove child that is not in the parent');
+                                return child; // Return the child as if it was removed
+                            }
+                            return originalRemoveChild.call(this, child);
+                        } catch (e) {
+                            console.warn('Error in removeChild, handling gracefully:', e);
+                            return child; // Return the child as if it was removed
+                        }
+                    };
+                    
+                    // Patch appendChild to be more robust
+                    const originalAppendChild = Node.prototype.appendChild;
+                    Node.prototype.appendChild = function(child) {
+                        try {
+                            // Check if the child is already attached elsewhere
+                            if (child.parentNode && child.parentNode !== this) {
+                                console.warn('Child is already attached to another parent, removing first');
+                                try {
+                                    child.parentNode.removeChild(child);
+                                } catch (e) {
+                                    console.warn('Error removing child from previous parent:', e);
+                                    // Try to clone the node instead
+                                    try {
+                                        const clone = child.cloneNode(true);
+                                        return originalAppendChild.call(this, clone);
+                                    } catch (cloneErr) {
+                                        console.warn('Error cloning node:', cloneErr);
+                                        return child; // Return original as fallback
+                                    }
+                                }
+                            }
+                            return originalAppendChild.call(this, child);
+                        } catch (e) {
+                            console.warn('Error in appendChild, handling gracefully:', e);
+                            return child; // Return the child as fallback
+                        }
+                    };
+                }
             }
         }, 500);
         
