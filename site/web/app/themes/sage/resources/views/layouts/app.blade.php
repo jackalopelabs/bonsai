@@ -6,7 +6,8 @@
     @php(do_action('get_header'))
     @php(wp_head())
 
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @php(wp_enqueue_style('sage/app.css', asset('app.css'), false, null))
+    @php(wp_enqueue_script('sage/app.js', asset('app.js'), ['jquery'], null, true))
     @include('bonsai.components.chosen.analytics')
   </head>
 
