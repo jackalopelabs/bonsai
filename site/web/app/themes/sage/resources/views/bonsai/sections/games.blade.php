@@ -21,13 +21,28 @@
         
         <div class="relative bg-black rounded-xl shadow-xl overflow-hidden">
             <div class="absolute top-4 right-4 z-10">
-                <button id="fullscreen-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors duration-200 flex items-center gap-2">
+                <button id="fullscreen-btn" class="text-gray-100 px-4 py-2 rounded-lg flex items-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
                     </svg>
-                    <span>Fullscreen</span>
                 </button>
             </div>
+            
+            <!-- Add click-to-play overlay -->
+            <div id="jackalope-click-to-play" class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-20 pointer-events-auto cursor-pointer">
+                <div class="text-center p-6 bg-indigo-900 bg-opacity-80 rounded-lg shadow-lg">
+                    <svg class="w-16 h-16 mx-auto mb-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                    </svg>
+                    <h3 class="text-2xl font-bold text-white mb-2">Click to Play</h3>
+                    <p class="text-indigo-200 mb-4">Click here to activate the game controls.<br>You can press ESC anytime to release the mouse.</p>
+                    <button class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg transition-colors duration-200 font-medium">
+                        Start Game
+                    </button>
+                </div>
+            </div>
+            
             {!! do_shortcode('[jackalopes]') !!}
         </div>
         
@@ -104,6 +119,25 @@ body > .jackalope-ui-element {
     display: block !important;
 }
 
+/* Click-to-play overlay styles */
+#jackalope-click-to-play {
+    transition: opacity 0.3s ease;
+    pointer-events: all;
+    z-index: 100;
+}
+
+/* When overlay is active, block pointer events on canvas */
+#jackalope-click-to-play ~ canvas,
+#jackalope-click-to-play ~ div canvas {
+    pointer-events: none !important;
+}
+
+/* Once overlay is removed, allow pointer events again */
+#jackalope-click-to-play[style*="display: none"] ~ canvas,
+#jackalope-click-to-play[style*="display: none"] ~ div canvas {
+    pointer-events: auto !important;
+}
+
 /* Fullscreen mode */
 .game-fullscreen,
 .jp-fullscreen,
@@ -176,6 +210,30 @@ body > .jackalope-ui-element {
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Initializing Jackalope UI containment and fullscreen handler');
+    
+    // Click-to-play overlay handling
+    const clickToPlayOverlay = document.getElementById('jackalope-click-to-play');
+    if (clickToPlayOverlay) {
+        // Track if overlay has been clicked already
+        let overlayClicked = false;
+        
+        clickToPlayOverlay.addEventListener('click', function() {
+            // Hide the overlay
+            clickToPlayOverlay.style.opacity = '0';
+            setTimeout(() => {
+                clickToPlayOverlay.style.display = 'none';
+            }, 300); // Match transition duration
+            overlayClicked = true;
+        });
+        
+        // Make sure overlay doesn't reappear when pointer lock is exited
+        document.addEventListener('pointerlockchange', function() {
+            if (document.pointerLockElement === null && overlayClicked) {
+                // Don't show overlay again once it's been clicked
+                clickToPlayOverlay.style.display = 'none';
+            }
+        });
+    }
     
     // Prevent spacebar from scrolling the page
     document.addEventListener('keydown', function(e) {
@@ -448,6 +506,15 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Setting up fullscreen handler for container:', container);
         
         fullscreenBtn.addEventListener('click', function() {
+            // Always hide the click-to-play overlay when entering fullscreen
+            const clickToPlayOverlay = document.getElementById('jackalope-click-to-play');
+            if (clickToPlayOverlay && clickToPlayOverlay.style.display !== 'none') {
+                clickToPlayOverlay.style.opacity = '0';
+                setTimeout(() => {
+                    clickToPlayOverlay.style.display = 'none';
+                }, 300);
+            }
+            
             if (!document.fullscreenElement) {
                 // Enter fullscreen
                 console.log('Entering fullscreen');
@@ -514,7 +581,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
                         </svg>
-                        <span>Fullscreen</span>
                     `;
                     
                     // Restore UI elements
@@ -551,7 +617,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
                     </svg>
-                    <span>Fullscreen</span>
                 `;
                 
                 // Restore UI elements
