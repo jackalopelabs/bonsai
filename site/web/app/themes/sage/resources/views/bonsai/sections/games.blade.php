@@ -20,9 +20,6 @@
         </div>
         
         <div id="jackalope-game-container" class="relative bg-black rounded-xl shadow-xl overflow-hidden" style="height: 600px;">
-            <!-- Debug info -->
-            <div id="debug-info" class="absolute top-0 left-0 bg-black bg-opacity-50 text-white p-2 text-xs z-50"></div>
-            
             <!-- Simplified fullscreen button -->
             <button id="fullscreen-btn" class="absolute top-4 right-4 z-30 text-gray-100 px-4 py-2 rounded-lg flex items-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -105,7 +102,6 @@
     position: absolute;
     top: 0;
     left: 0;
-    z-index: 10;
 }
 
 /* Ensure the game container is properly sized */
@@ -120,7 +116,6 @@
     transition: opacity 0.3s ease;
     pointer-events: all;
     cursor: pointer;
-    z-index: 20;
 }
 
 /* Fullscreen styles */
@@ -147,14 +142,6 @@
     right: 10px !important;
     z-index: 10001 !important;
 }
-
-/* Debug info */
-#debug-info {
-    font-family: monospace;
-    white-space: pre;
-    max-height: 200px;
-    overflow-y: auto;
-}
 </style>
 
 <script>
@@ -162,42 +149,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const gameContainer = document.getElementById('jackalope-game-container');
     const clickToPlayOverlay = document.getElementById('jackalope-click-to-play');
     const fullscreenBtn = document.getElementById('fullscreen-btn');
-    const debugInfo = document.getElementById('debug-info');
-    
-    // Debug logging function
-    function debugLog(message) {
-        console.log(message);
-        if (debugInfo) {
-            const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
-            debugInfo.innerHTML += `[${timestamp}] ${message}\n`;
-            debugInfo.scrollTop = debugInfo.scrollHeight;
-        }
-    }
-    
-    // Log initial state
-    debugLog('Initializing Jackalope game...');
-    debugLog(`Game container found: ${!!gameContainer}`);
-    debugLog(`Click to play overlay found: ${!!clickToPlayOverlay}`);
-    debugLog(`Fullscreen button found: ${!!fullscreenBtn}`);
-    debugLog(`User agent: ${navigator.userAgent}`);
-    debugLog(`Screen size: ${window.innerWidth}x${window.innerHeight}`);
     
     // Click-to-play functionality
     if (clickToPlayOverlay) {
         clickToPlayOverlay.addEventListener('click', function() {
-            debugLog('Click to play overlay clicked');
             clickToPlayOverlay.style.opacity = '0';
             setTimeout(() => {
                 clickToPlayOverlay.style.display = 'none';
-                debugLog('Click to play overlay hidden');
                 
                 // Force a resize event to ensure the game adapts
                 window.dispatchEvent(new Event('resize'));
-                debugLog('Resize event dispatched');
                 
                 // Send a custom event to notify the game to start
                 window.dispatchEvent(new CustomEvent('jackalopesGameStarted'));
-                debugLog('Game started event dispatched');
             }, 300);
         });
     }
@@ -205,10 +169,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Fullscreen functionality
     if (fullscreenBtn && gameContainer) {
         fullscreenBtn.addEventListener('click', function() {
-            debugLog('Fullscreen button clicked');
             if (!document.fullscreenElement) {
                 gameContainer.requestFullscreen().then(() => {
-                    debugLog('Entered fullscreen mode');
                     gameContainer.classList.add('game-fullscreen');
                     fullscreenBtn.classList.add('exit');
                     fullscreenBtn.innerHTML = `
@@ -222,19 +184,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (canvas) {
                         canvas.style.width = '100vw';
                         canvas.style.height = '100vh';
-                        debugLog('Canvas resized for fullscreen');
                     }
                     
                     // Force game to resize
                     window.dispatchEvent(new Event('resize'));
                 }).catch(err => {
-                    debugLog(`Error entering fullscreen: ${err.message}`);
+                    console.error('Error entering fullscreen:', err);
                 });
             } else {
                 document.exitFullscreen().catch(err => {
-                    debugLog(`Error exiting fullscreen: ${err.message}`);
+                    console.error('Error exiting fullscreen:', err);
                 }).finally(() => {
-                    debugLog('Exited fullscreen mode');
                     gameContainer.classList.remove('game-fullscreen');
                     fullscreenBtn.classList.remove('exit');
                     fullscreenBtn.innerHTML = `
@@ -251,7 +211,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Handle ESC key for exiting fullscreen
         document.addEventListener('fullscreenchange', function() {
-            debugLog('Fullscreen state changed');
             if (!document.fullscreenElement && gameContainer.classList.contains('game-fullscreen')) {
                 gameContainer.classList.remove('game-fullscreen');
                 fullscreenBtn.classList.remove('exit');
@@ -271,17 +230,9 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => {
         const canvas = gameContainer.querySelector('canvas');
         if (canvas) {
-            debugLog('Canvas found, setting display properties');
             canvas.style.display = 'block';
             canvas.style.width = '100%';
             canvas.style.height = '100%';
-            
-            // Log canvas properties
-            debugLog(`Canvas dimensions: ${canvas.width}x${canvas.height}`);
-            debugLog(`Canvas style: ${canvas.style.cssText}`);
-            debugLog(`Canvas computed style: ${window.getComputedStyle(canvas).cssText}`);
-        } else {
-            debugLog('Canvas not found after timeout');
         }
     }, 1000);
     
@@ -289,31 +240,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
             if (mutation.addedNodes.length) {
-                debugLog(`DOM mutation detected: ${mutation.addedNodes.length} nodes added`);
                 // Check for UI elements that might be added dynamically
                 document.querySelectorAll('.fps-stats, #stats, .virtual-gamepad').forEach(el => {
-                    debugLog(`UI element found: ${el.tagName}${el.id ? '#' + el.id : ''}${el.className ? '.' + el.className : ''}`);
                     // Ensure they have proper z-index
                     el.style.zIndex = '30';
                     // Ensure they're visible
                     el.style.display = 'block';
                     el.style.opacity = '1';
-                    debugLog(`UI element style updated: ${el.style.cssText}`);
                 });
             }
         });
     });
     
     observer.observe(gameContainer, { childList: true, subtree: true });
-    
-    // Add visibility change listener
-    document.addEventListener('visibilitychange', function() {
-        debugLog(`Document visibility changed: ${document.visibilityState}`);
-    });
-    
-    // Add resize listener
-    window.addEventListener('resize', function() {
-        debugLog(`Window resized: ${window.innerWidth}x${window.innerHeight}`);
-    });
 });
 </script>
