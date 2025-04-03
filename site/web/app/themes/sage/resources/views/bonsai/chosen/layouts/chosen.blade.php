@@ -39,6 +39,7 @@
             }
         </style>
         @php(wp_body_open())
+        {!! do_shortcode('[jackalopes width="100%" height="100%" disable_ui="false"]') !!}
         <div id="app" class="relative z-10">
             <a class="sr-only focus:not-sr-only" href="#main">
                 {{ __('Skip to content', 'radicle') }}
@@ -48,7 +49,7 @@
 
             <main id="main" class="max-w-5xl mx-auto">
                 <div class="{{ $containerInnerClasses ?? 'px-6' }}">
-                    @yield('content')
+                    {{-- @yield('content') --}}
                 </div>
             </main>
 
