@@ -29,7 +29,7 @@
             </div>
             
             <!-- Add click-to-play overlay -->
-            <div id="jackalope-click-to-play" class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-20 pointer-events-auto cursor-pointer">
+            <div id="jackalope-click-to-play" class="absolute inset-0 flex items-center justify-center z-20 pointer-events-auto cursor-pointer">
                 <div class="text-center p-6 bg-indigo-900 bg-opacity-80 rounded-lg shadow-lg">
                     <svg class="w-16 h-16 mx-auto mb-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
