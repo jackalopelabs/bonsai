@@ -2,13 +2,13 @@
 <html @php(language_attributes()) x-data="globalData" class="relative h-screen">
     <!-- Hero Background Images -->
     <div class="absolute inset-0 z-0">
-        <img src="{{ Vite::asset('resources/images/chosen_hero_03.webp') }}"
+        <img src="{{ asset('resources/images/chosen_hero_03.webp') }}"
                 alt="Background Light"
                 class="w-full h-full object-cover object-top opacity-100"
                 style="display: none;"
                 x-bind:style="!darkMode ? 'display: block;' : 'display: none;'"
         />
-        <img src="{{ Vite::asset('resources/images/chosen_hero_01.webp') }}" 
+        <img src="{{ asset('resources/images/chosen_hero_01.webp') }}" 
                 alt="Background Dark" 
                 class="w-full h-full object-cover object-top opacity-100"
                 style="display: block;"
@@ -21,8 +21,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         @php(do_action('get_header'))
         @php(wp_head())
-        @php(wp_enqueue_style('sage/app.css', asset('app.css'), false, null))
-        @php(wp_enqueue_script('sage/app.js', asset('app.js'), ['jquery'], null, true))
+        @php(wp_enqueue_style('sage/app.css', asset('resources/css/app.css'), false, null))
+        @php(wp_enqueue_script('sage/app.js', asset('resources/js/app.js'), ['jquery'], null, true))
         @include('bonsai.components.chosen.analytics')
     </head>
 

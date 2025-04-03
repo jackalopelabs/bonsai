@@ -10,6 +10,29 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Vite;
 
 /**
+ * Get the correct asset URL from the manifest in production
+ * or from Vite in development.
+ *
+ * @param string $path
+ * @return string
+ */
+function sage_asset($path)
+{
+    if (Vite::isRunningHot()) {
+        return Vite::asset($path);
+    }
+
+    // In production, the asset path points to compiled files with hashes
+    if (file_exists($manifest = public_path('build/manifest.json'))) {
+        $manifest = json_decode(file_get_contents($manifest), true);
+        $path = $manifest[$path]['file'] ?? $path;
+        return get_stylesheet_directory_uri() . '/public/build/' . $path;
+    }
+
+    return get_stylesheet_directory_uri() . '/' . $path;
+}
+
+/**
  * Inject styles into the block editor.
  *
  * @return array
