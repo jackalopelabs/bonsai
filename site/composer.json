@@ -68,7 +68,7 @@
         "jackalopelabs/bonsai-cli": "dev-kanban",
         "jackalopelabs/jackalopes-server": "dev-main",
         "jackalopelabs/jackalope-planet": "dev-main",
-        "jackalopelabs/jackalopes-wp": "dev-retrograde"
+        "jackalopelabs/jackalopes-wp": "dev-master"
     },
     "require-dev": {
         "roave/security-advisories": "dev-latest",
