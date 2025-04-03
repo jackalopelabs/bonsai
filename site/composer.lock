@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "05d66fd267f0a8e9852364698302cd0b",
+    "content-hash": "2cf7fb963da361fcacbd74f99e046037",
     "packages": [
         {
             "name": "blade-ui-kit/blade-heroicons",
@@ -2941,16 +2941,16 @@
         },
         {
             "name": "jackalopelabs/jackalopes-wp",
-            "version": "dev-retrograde",
+            "version": "dev-master",
             "source": {
                 "type": "git",
                 "url": "https://github.com/jackalopelabs/jackalopes-wp.git",
-                "reference": "c77e49d93693adffb7b608aad11eb9e1bfb448b4"
+                "reference": "594106f7a96794f1c854fe04a571a6dcb9d7378e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/jackalopelabs/jackalopes-wp/zipball/c77e49d93693adffb7b608aad11eb9e1bfb448b4",
-                "reference": "c77e49d93693adffb7b608aad11eb9e1bfb448b4",
+                "url": "https://api.github.com/repos/jackalopelabs/jackalopes-wp/zipball/594106f7a96794f1c854fe04a571a6dcb9d7378e",
+                "reference": "594106f7a96794f1c854fe04a571a6dcb9d7378e",
                 "shasum": ""
             },
             "require": {
@@ -2981,10 +2981,10 @@
             ],
             "description": "3D first-person shooter game for WordPress built with React Three Fiber and ThreeJS",
             "support": {
-                "source": "https://github.com/jackalopelabs/jackalopes-wp/tree/retrograde",
+                "source": "https://github.com/jackalopelabs/jackalopes-wp/tree/master",
                 "issues": "https://github.com/jackalopelabs/jackalopes-wp/issues"
             },
-            "time": "2025-04-02T22:08:34+00:00"
+            "time": "2025-04-03T00:47:57+00:00"
         },
         {
             "name": "laravel/prompts",
