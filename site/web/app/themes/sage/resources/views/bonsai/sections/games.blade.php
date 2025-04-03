@@ -19,31 +19,31 @@
             </p> --}}
         </div>
         
-        <div class="relative bg-black rounded-xl shadow-xl overflow-hidden">
-            <div class="absolute top-4 right-4 z-10">
-                <button id="fullscreen-btn" class="text-gray-100 px-4 py-2 rounded-lg flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
-                    </svg>
-                </button>
-            </div>
+        <div id="jackalope-game-container" class="relative bg-black rounded-xl shadow-xl overflow-hidden" style="height: 600px;">
+            <!-- Simplified fullscreen button -->
+            <button id="fullscreen-btn" class="absolute top-4 right-4 z-30 text-gray-100 px-4 py-2 rounded-lg flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+                </svg>
+            </button>
             
-            <!-- Add click-to-play overlay -->
-            <div id="jackalope-click-to-play" class="absolute inset-0 flex items-center justify-center z-20 pointer-events-auto cursor-pointer">
-                <div class="text-center p-6 bg-indigo-900 bg-opacity-80 rounded-lg shadow-lg">
+            <!-- Simplified click-to-play overlay -->
+            <div id="jackalope-click-to-play" class="absolute inset-0 flex items-center justify-center z-20 bg-black bg-opacity-70">
+                <div class="text-center p-6 bg-indigo-900 rounded-lg shadow-lg">
                     <svg class="w-16 h-16 mx-auto mb-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                     </svg>
                     <h3 class="text-2xl font-bold text-white mb-2">Click to Play</h3>
-                    <p class="text-indigo-200 mb-4">Click here to activate the game controls.<br>You can press ESC anytime to release the mouse.</p>
+                    <p class="text-indigo-200 mb-4">Click here to activate the game controls.</p>
                     <button class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg transition-colors duration-200 font-medium">
                         Start Game
                     </button>
                 </div>
             </div>
             
-            {!! do_shortcode('[jackalopes]') !!}
+            <!-- Game shortcode -->
+            {!! do_shortcode('[jackalopes width="100%" height="100%" disable_ui="false"]') !!}
         </div>
         
         {{-- <div class="mt-12 grid md:grid-cols-2 gap-8">
@@ -93,112 +93,49 @@
     </div>
 </div>
 
-<style id="jackalope-ui-fix">
-
-/* Fix for UI elements that might get created at body level */
-body > .fps-stats,
-body > .virtual-gamepad,
-body > #stats,
-body > .leva-c-kWgxhW,
-body > button[style*="position: fixed"],
-body > div[style*="position: fixed"][style*="z-index"],
-body > .jackalopes-ui,
-body > .jackalope-ui-element {
-    position: absolute !important; 
-    z-index: 9999 !important;
-    top: auto !important;
-    left: auto !important;
-}
-
-/* Game container selectors */
-.jackalopes-game-container canvas,
-#jackalopes-game-container canvas,
-.relative.bg-black.rounded-xl canvas {
+<style>
+/* Ensure the canvas is properly displayed in all browsers */
+#jackalope-game-container canvas {
+    display: block !important;
     width: 100% !important;
     height: 100% !important;
-    display: block !important;
+    position: absolute;
+    top: 0;
+    left: 0;
 }
 
-/* Click-to-play overlay styles */
+/* Ensure the game container is properly sized */
+#jackalope-game-container {
+    display: block;
+    position: relative;
+    min-height: 480px;
+}
+
+/* Click-to-play overlay */
 #jackalope-click-to-play {
     transition: opacity 0.3s ease;
     pointer-events: all;
-    z-index: 100;
+    cursor: pointer;
 }
 
-/* When overlay is active, block pointer events on canvas */
-#jackalope-click-to-play ~ canvas,
-#jackalope-click-to-play ~ div canvas {
-    pointer-events: none !important;
-}
-
-/* Once overlay is removed, allow pointer events again */
-#jackalope-click-to-play[style*="display: none"] ~ canvas,
-#jackalope-click-to-play[style*="display: none"] ~ div canvas {
-    pointer-events: auto !important;
-}
-
-/* Fullscreen mode */
-.game-fullscreen,
-.jp-fullscreen,
-.fullscreen-active {
+/* Fullscreen styles */
+.game-fullscreen {
     position: fixed !important;
     top: 0 !important;
     left: 0 !important;
     width: 100vw !important;
     height: 100vh !important;
     z-index: 9999 !important;
-    background: #000 !important;
-    margin: 0 !important;
-    padding: 0 !important;
 }
 
-/* Ensure UI elements are visible in fullscreen */
-.game-fullscreen .fps-stats,
-.game-fullscreen #stats,
-.game-fullscreen .leva-c-kWgxhW,
-.game-fullscreen .jackalopes-ui,
-.game-fullscreen div[style*="position: fixed"],
-.game-fullscreen button,
-.jp-fullscreen .fps-stats,
-.jp-fullscreen #stats,
-.jp-fullscreen .leva-c-kWgxhW,
-.jp-fullscreen .jackalopes-ui,
-.jp-fullscreen div[style*="position: fixed"],
-.jp-fullscreen button,
-.fullscreen-active .fps-stats,
-.fullscreen-active #stats,
-.fullscreen-active .leva-c-kWgxhW,
-.fullscreen-active .jackalopes-ui,
-.fullscreen-active div[style*="position: fixed"],
-.fullscreen-active button {
-    position: fixed !important;
-    z-index: 10000 !important;
-    display: block !important;
+/* Fix for UI elements */
+#jackalope-game-container .fps-stats,
+#jackalope-game-container #stats,
+#jackalope-game-container button {
+    z-index: 30 !important;
 }
 
-/* Add class to make elements visible in fullscreen */
-.jackalope-ui-element {
-    z-index: 10000 !important;
-}
-
-/* Fix for Leva UI panel specifically */
-.leva-c-kWgxhW {
-    z-index: 10000 !important;
-    position: absolute !important;
-    top: 10px !important;
-    right: 10px !important;
-}
-
-/* Fix for Game Stats */
-#stats {
-    position: absolute !important;
-    top: 10px !important;
-    left: 10px !important;
-    z-index: 10000 !important;
-}
-
-/* Fullscreen button styles when active */
+/* Fullscreen button when active */
 #fullscreen-btn.exit {
     position: fixed !important;
     top: 10px !important;
@@ -209,441 +146,112 @@ body > .jackalope-ui-element {
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Initializing Jackalope UI containment and fullscreen handler');
-    
-    // Click-to-play overlay handling
+    const gameContainer = document.getElementById('jackalope-game-container');
     const clickToPlayOverlay = document.getElementById('jackalope-click-to-play');
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    
+    // Click-to-play functionality
     if (clickToPlayOverlay) {
-        // Track if overlay has been clicked already
-        let overlayClicked = false;
-        
         clickToPlayOverlay.addEventListener('click', function() {
-            // Hide the overlay
             clickToPlayOverlay.style.opacity = '0';
             setTimeout(() => {
                 clickToPlayOverlay.style.display = 'none';
-            }, 300); // Match transition duration
-            overlayClicked = true;
-        });
-        
-        // Make sure overlay doesn't reappear when pointer lock is exited
-        document.addEventListener('pointerlockchange', function() {
-            if (document.pointerLockElement === null && overlayClicked) {
-                // Don't show overlay again once it's been clicked
-                clickToPlayOverlay.style.display = 'none';
-            }
+                
+                // Force a resize event to ensure the game adapts
+                window.dispatchEvent(new Event('resize'));
+                
+                // Send a custom event to notify the game to start
+                window.dispatchEvent(new CustomEvent('jackalopesGameStarted'));
+            }, 300);
         });
     }
     
-    // Prevent spacebar from scrolling the page
-    document.addEventListener('keydown', function(e) {
-        if (e.code === 'Space' && e.target === document.body) {
-            e.preventDefault();
-        }
-    });
-    
-    // Function to find game container - try multiple possible selectors
-    function findGameContainer() {
-        return document.querySelector('.jackalopes-game-container') || 
-               document.querySelector('#jackalopes-game-container') ||
-               document.querySelector('.jackalope-planet-container') ||
-               document.querySelector('#jackalope-planet-container') ||
-               document.querySelector('.relative.bg-black.rounded-xl');
-    }
-    
-    // Set up enhanced UI containment for all game UI elements
-    function setupUIContainment() {
-        // Find the game container
-        const gameContainer = findGameContainer();
-        if (!gameContainer) {
-            console.log('Game container not found yet, waiting...');
-            
-            // Wait for it to be created
-            const observer = new MutationObserver((mutations) => {
-                const container = findGameContainer();
-                if (container) {
-                    console.log('Game container found:', container);
-                    observer.disconnect();
-                    setupUIContainmentForContainer(container);
-                }
-            });
-            
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true
-            });
-            
-            // Also check again after a short delay
-            setTimeout(() => {
-                const container = findGameContainer();
-                if (container) {
-                    console.log('Game container found after delay:', container);
-                    setupUIContainmentForContainer(container);
-                }
-            }, 1000);
-        } else {
-            console.log('Game container found immediately:', gameContainer);
-            setupUIContainmentForContainer(gameContainer);
-        }
-    }
-    
-    // Patch three.js to properly handle DOM cleanup
-    function patchThreeJsDispose() {
-        // Wait for Three.js to load
-        const checkInterval = setInterval(() => {
-            if (window.THREE) {
-                clearInterval(checkInterval);
-                console.log('THREE.js detected, applying patches');
-                
-                // Patch Object3D dispose to be more robust
-                const originalDispose = window.THREE.Object3D.prototype.dispose;
-                if (originalDispose) {
-                    window.THREE.Object3D.prototype.dispose = function() {
-                        try {
-                            // Call original dispose method safely
-                            return originalDispose.apply(this, arguments);
-                        } catch (e) {
-                            console.warn('Error in THREE.Object3D.dispose, handling gracefully:', e);
-                        }
-                    };
-                }
-                
-                // Add additional protection for scene dispose
-                if (window.THREE.Scene) {
-                    const originalSceneDispose = window.THREE.Scene.prototype.dispose;
-                    window.THREE.Scene.prototype.dispose = function() {
-                        try {
-                            // First remove all children safely
-                            if (this.children && this.children.length) {
-                                // Create a copy of the children array to avoid modification during iteration
-                                const childrenCopy = [...this.children];
-                                childrenCopy.forEach(child => {
-                                    try {
-                                        this.remove(child);
-                                    } catch (e) {
-                                        console.warn('Error removing child from scene:', e);
-                                    }
-                                });
-                            }
-                            
-                            // Then call original dispose method
-                            if (originalSceneDispose) {
-                                return originalSceneDispose.apply(this, arguments);
-                            }
-                        } catch (e) {
-                            console.warn('Error in THREE.Scene.dispose, handling gracefully:', e);
-                        }
-                    };
-                }
-                
-                // Patch Node prototype to handle DOM manipulation errors
-                if (typeof Node !== 'undefined') {
-                    // Patch removeChild to be more robust
-                    const originalRemoveChild = Node.prototype.removeChild;
-                    Node.prototype.removeChild = function(child) {
-                        try {
-                            // Check if child is actually a child of this node
-                            if (!this.contains(child)) {
-                                console.warn('Cannot remove child that is not in the parent');
-                                return child; // Return the child as if it was removed
-                            }
-                            return originalRemoveChild.call(this, child);
-                        } catch (e) {
-                            console.warn('Error in removeChild, handling gracefully:', e);
-                            return child; // Return the child as if it was removed
-                        }
-                    };
-                    
-                    // Patch appendChild to be more robust
-                    const originalAppendChild = Node.prototype.appendChild;
-                    Node.prototype.appendChild = function(child) {
-                        try {
-                            // Check if the child is already attached elsewhere
-                            if (child.parentNode && child.parentNode !== this) {
-                                console.warn('Child is already attached to another parent, removing first');
-                                try {
-                                    child.parentNode.removeChild(child);
-                                } catch (e) {
-                                    console.warn('Error removing child from previous parent:', e);
-                                    // Try to clone the node instead
-                                    try {
-                                        const clone = child.cloneNode(true);
-                                        return originalAppendChild.call(this, clone);
-                                    } catch (cloneErr) {
-                                        console.warn('Error cloning node:', cloneErr);
-                                        return child; // Return original as fallback
-                                    }
-                                }
-                            }
-                            return originalAppendChild.call(this, child);
-                        } catch (e) {
-                            console.warn('Error in appendChild, handling gracefully:', e);
-                            return child; // Return the child as fallback
-                        }
-                    };
-                }
-            }
-        }, 500);
-        
-        // Stop checking after 10 seconds
-        setTimeout(() => {
-            clearInterval(checkInterval);
-        }, 10000);
-    }
-    
-    // Function to set up containment for a specific container
-    function setupUIContainmentForContainer(container) {
-        console.log('Setting up UI containment for container:', container);
-        
-        // Add a class for easier styling
-        container.classList.add('jackalope-game-container');
-        
-        // Set up fullscreen functionality
-        setupFullscreenHandler(container);
-        
-        // Find all UI elements and move them into the container
-        function relocateUIElements() {
-            // List of selectors for UI elements
-            const uiSelectors = [
-                '.fps-stats', 
-                '.virtual-gamepad',
-                '#stats',
-                '.leva-c-kWgxhW',
-                'div[style*="position: fixed"][style*="z-index"]',
-                'button[style*="position: fixed"][style*="z-index"]',
-                '.jackalopes-ui'
-            ];
-            
-            // Find all UI elements
-            uiSelectors.forEach(selector => {
-                const elements = document.querySelectorAll(selector);
-                
-                elements.forEach(element => {
-                    // Skip if already in the container
-                    if (element.parentElement === container) {
-                        return;
-                    }
-                    
-                    console.log('Moving UI element into container:', element);
-                    
-                    // Add class for easier styling
-                    element.classList.add('jackalope-ui-element');
-                    
-                    // Get current position
-                    const rect = element.getBoundingClientRect();
-                    const containerRect = container.getBoundingClientRect();
-                    
-                    // Calculate relative position within container
-                    let top = rect.top - containerRect.top;
-                    let left = rect.left - containerRect.left;
-                    
-                    // Ensure element doesn't go outside container
-                    top = Math.max(0, Math.min(top, containerRect.height - 50));
-                    left = Math.max(0, Math.min(left, containerRect.width - 50));
-                    
-                    // Move to container
-                    container.appendChild(element);
-                    
-                    // Set position
-                    element.style.position = 'absolute';
-                    element.style.top = top + 'px';
-                    element.style.left = left + 'px';
-                    element.style.zIndex = '9999';
-                });
-            });
-        }
-        
-        // Relocate UI elements initially
-        relocateUIElements();
-        
-        // Set up observer to detect new UI elements
-        const observer = new MutationObserver((mutations) => {
-            let shouldRelocate = false;
-            
-            mutations.forEach(mutation => {
-                if (mutation.addedNodes.length > 0) {
-                    for (let i = 0; i < mutation.addedNodes.length; i++) {
-                        const node = mutation.addedNodes[i];
-                        if (node.nodeType === 1) { // Element node
-                            if (node.classList && 
-                                (node.classList.contains('fps-stats') || 
-                                 node.id === 'stats' || 
-                                 node.classList.contains('leva-c-kWgxhW') ||
-                                 node.classList.contains('jackalopes-ui') ||
-                                 node.style.position === 'fixed')) {
-                                shouldRelocate = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-            });
-            
-            if (shouldRelocate) {
-                relocateUIElements();
-            }
-        });
-        
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ['style', 'class']
-        });
-        
-        // Also set an interval to check periodically
-        setInterval(relocateUIElements, 1000);
-    }
-    
-    // Set up fullscreen functionality
-    function setupFullscreenHandler(container) {
-        const fullscreenBtn = document.getElementById('fullscreen-btn');
-        if (!fullscreenBtn) {
-            console.log('Fullscreen button not found');
-            return;
-        }
-        
-        console.log('Setting up fullscreen handler for container:', container);
-        
+    // Fullscreen functionality
+    if (fullscreenBtn && gameContainer) {
         fullscreenBtn.addEventListener('click', function() {
-            // Always hide the click-to-play overlay when entering fullscreen
-            const clickToPlayOverlay = document.getElementById('jackalope-click-to-play');
-            if (clickToPlayOverlay && clickToPlayOverlay.style.display !== 'none') {
-                clickToPlayOverlay.style.opacity = '0';
-                setTimeout(() => {
-                    clickToPlayOverlay.style.display = 'none';
-                }, 300);
-            }
-            
             if (!document.fullscreenElement) {
-                // Enter fullscreen
-                console.log('Entering fullscreen');
-                
-                try {
-                    // First, mark all UI elements
-                    const uiElements = document.querySelectorAll('.fps-stats, #stats, .leva-c-kWgxhW, .jackalopes-ui, div[style*="position: fixed"], button[style*="position: fixed"]');
-                    uiElements.forEach(el => {
-                        el.classList.add('jackalope-ui-element');
-                        el.dataset.originalPosition = window.getComputedStyle(el).position;
-                        el.dataset.originalZIndex = window.getComputedStyle(el).zIndex;
-                    });
+                gameContainer.requestFullscreen().then(() => {
+                    gameContainer.classList.add('game-fullscreen');
+                    fullscreenBtn.classList.add('exit');
+                    fullscreenBtn.innerHTML = `
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20H5m0 0v-4m0 4l5-5m11 5l-5-5m5 5v-4m0 4h-4M4 8V4m0 0h4M4 4l5 5"></path>
+                        </svg>
+                    `;
                     
-                    // Request fullscreen
-                    container.requestFullscreen().then(() => {
-                        container.classList.add('game-fullscreen');
-                        fullscreenBtn.classList.add('exit');
-                        
-                        // Update button
-                        fullscreenBtn.innerHTML = `
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20H5m0 0v-4m0 4l5-5m11 5l-5-5m5 5v-4m0 4h-4M4 8V4m0 0h4M4 4l5 5"></path>
-                            </svg>
-                            <span>Exit Fullscreen</span>
-                        `;
-                        
-                        // Fix UI elements
-                        uiElements.forEach(el => {
-                            el.style.position = 'fixed';
-                            el.style.zIndex = '10000';
-                        });
-                        
-                        // Add temporary style
-                        const style = document.createElement('style');
-                        style.id = 'temp-fullscreen-fix';
-                        style.textContent = `
-                            body > .jackalope-ui-element {
-                                position: fixed !important;
-                                z-index: 10000 !important;
-                                display: block !important;
-                            }
-                        `;
-                        document.head.appendChild(style);
-                        
-                        // Trigger resize
-                        window.dispatchEvent(new Event('resize'));
-                    }).catch(err => {
-                        console.error('Error entering fullscreen:', err);
-                    });
-                } catch (e) {
-                    console.error('Could not request fullscreen:', e);
-                }
+                    // Make sure canvas is properly sized in fullscreen
+                    const canvas = gameContainer.querySelector('canvas');
+                    if (canvas) {
+                        canvas.style.width = '100vw';
+                        canvas.style.height = '100vh';
+                    }
+                    
+                    // Force game to resize
+                    window.dispatchEvent(new Event('resize'));
+                }).catch(err => {
+                    console.error('Error entering fullscreen:', err);
+                });
             } else {
-                // Exit fullscreen
                 document.exitFullscreen().catch(err => {
                     console.error('Error exiting fullscreen:', err);
                 }).finally(() => {
-                    // Clean up
-                    container.classList.remove('game-fullscreen');
+                    gameContainer.classList.remove('game-fullscreen');
                     fullscreenBtn.classList.remove('exit');
-                    
-                    // Update button
                     fullscreenBtn.innerHTML = `
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
                         </svg>
                     `;
                     
-                    // Restore UI elements
-                    const uiElements = document.querySelectorAll('.jackalope-ui-element');
-                    uiElements.forEach(el => {
-                        if (el.dataset.originalPosition) {
-                            el.style.position = el.dataset.originalPosition;
-                        }
-                        if (el.dataset.originalZIndex) {
-                            el.style.zIndex = el.dataset.originalZIndex;
-                        }
-                    });
-                    
-                    // Remove temporary style
-                    const tempStyle = document.getElementById('temp-fullscreen-fix');
-                    if (tempStyle) {
-                        tempStyle.remove();
-                    }
-                    
-                    // Trigger resize
+                    // Force game to resize
                     window.dispatchEvent(new Event('resize'));
                 });
             }
         });
         
-        // Handle ESC key and other ways of exiting fullscreen
+        // Handle ESC key for exiting fullscreen
         document.addEventListener('fullscreenchange', function() {
-            if (!document.fullscreenElement && container.classList.contains('game-fullscreen')) {
-                container.classList.remove('game-fullscreen');
+            if (!document.fullscreenElement && gameContainer.classList.contains('game-fullscreen')) {
+                gameContainer.classList.remove('game-fullscreen');
                 fullscreenBtn.classList.remove('exit');
-                
-                // Update button
                 fullscreenBtn.innerHTML = `
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
                     </svg>
                 `;
                 
-                // Restore UI elements
-                const uiElements = document.querySelectorAll('.jackalope-ui-element');
-                uiElements.forEach(el => {
-                    if (el.dataset.originalPosition) {
-                        el.style.position = el.dataset.originalPosition;
-                    }
-                    if (el.dataset.originalZIndex) {
-                        el.style.zIndex = el.dataset.originalZIndex;
-                    }
-                });
-                
-                // Remove temporary style
-                const tempStyle = document.getElementById('temp-fullscreen-fix');
-                if (tempStyle) {
-                    tempStyle.remove();
-                }
-                
-                // Trigger resize
+                // Force game to resize
                 window.dispatchEvent(new Event('resize'));
             }
         });
     }
     
-    // Initialize patches
-    patchThreeJsDispose();
-    setupUIContainment();
+    // Ensure canvas visibility after a short delay
+    setTimeout(() => {
+        const canvas = gameContainer.querySelector('canvas');
+        if (canvas) {
+            canvas.style.display = 'block';
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
+        }
+    }, 1000);
+    
+    // Make sure controls and UI are visible on mobile
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.addedNodes.length) {
+                // Check for UI elements that might be added dynamically
+                document.querySelectorAll('.fps-stats, #stats, .virtual-gamepad').forEach(el => {
+                    // Ensure they have proper z-index
+                    el.style.zIndex = '30';
+                    // Ensure they're visible
+                    el.style.display = 'block';
+                    el.style.opacity = '1';
+                });
+            }
+        });
+    });
+    
+    observer.observe(gameContainer, { childList: true, subtree: true });
 });
 </script>
