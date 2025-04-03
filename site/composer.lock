@@ -2945,12 +2945,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/jackalopelabs/jackalopes-wp.git",
-                "reference": "87a249359581bdb2168e8a5adf9d69ab3f2b26b4"
+                "reference": "52016420bf2c536e8b7eeb7278bf78118cdeb596"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/jackalopelabs/jackalopes-wp/zipball/87a249359581bdb2168e8a5adf9d69ab3f2b26b4",
-                "reference": "87a249359581bdb2168e8a5adf9d69ab3f2b26b4",
+                "url": "https://api.github.com/repos/jackalopelabs/jackalopes-wp/zipball/52016420bf2c536e8b7eeb7278bf78118cdeb596",
+                "reference": "52016420bf2c536e8b7eeb7278bf78118cdeb596",
                 "shasum": ""
             },
             "require": {
@@ -2984,7 +2984,7 @@
                 "source": "https://github.com/jackalopelabs/jackalopes-wp/tree/master",
                 "issues": "https://github.com/jackalopelabs/jackalopes-wp/issues"
             },
-            "time": "2025-04-03T10:17:37+00:00"
+            "time": "2025-04-03T10:23:29+00:00"
         },
         {
             "name": "laravel/prompts",
