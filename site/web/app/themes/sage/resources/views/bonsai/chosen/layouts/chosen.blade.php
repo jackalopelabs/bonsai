@@ -25,7 +25,7 @@
         @php(wp_enqueue_script('sage/app.js', asset('resources/js/app.js'), ['jquery'], null, true))
         @include('bonsai.components.chosen.analytics')
     </head>
-
+    
     <body @php(body_class('transition-colors duration-200 p-0 m-0 h-screen')) 
           x-bind:class="darkMode ? 'dark-mode' : 'light-mode'">
         <style>
@@ -39,7 +39,6 @@
             }
         </style>
         @php(wp_body_open())
-        {!! do_shortcode('[jackalopes width="100%" height="100%" disable_ui="false"]') !!}
         <div id="app" class="relative z-10">
             <a class="sr-only focus:not-sr-only" href="#main">
                 {{ __('Skip to content', 'radicle') }}
@@ -49,7 +48,7 @@
 
             <main id="main" class="max-w-5xl mx-auto">
                 <div class="{{ $containerInnerClasses ?? 'px-6' }}">
-                    {{-- @yield('content') --}}
+                    @yield('content')
                 </div>
             </main>
 
