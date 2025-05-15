@@ -109,52 +109,74 @@ Clear these files of duplicate entries for our [sitename]
    trellis vm sudoers | sudo tee /etc/sudoers.d/trellis
    ```
 
-2. **Get current Lima VM port**:
+2. **Get current Lima VM port and update SSH config in one step**:
    ```bash
-   limactl list
+   # Check if VM is running first
+   if ! limactl list | grep "[projectname].so" | grep -q "Running"; then
+     echo "Lima VM for [projectname].so is not running. Starting it now..."
+     trellis vm start
+   fi
+   
+   # Get the current port (will only proceed if VM is running)
+   LIMA_PORT=$(limactl list | grep "[projectname].so" | grep "Running" | awk '{print $3}' | cut -d':' -f2)
+   
+   if [ -z "$LIMA_PORT" ]; then
+     echo "Error: Could not determine Lima VM port. Check if VM is running with 'limactl list'"
+     exit 1
+   fi
+   
+   # Remove existing entry first
+   grep -v "[sitename-tld.test]" ~/.ssh/config > /tmp/ssh_config_clean
+   
+   # Add new entry with current port
+   echo "Host [sitename-tld.test]
+  HostName 127.0.0.1
+  User $USER
+  Port $LIMA_PORT
+  IdentityFile ~/.lima/_config/user
+  IdentityFile ~/.ssh/id_ed25519
+  StrictHostKeyChecking accept-new
+  UserKnownHostsFile ~/.ssh/known_hosts" >> /tmp/ssh_config_clean
+   
+   mv /tmp/ssh_config_clean ~/.ssh/config
+   echo "✅ Updated SSH config with Lima port: $LIMA_PORT"
    ```
-   Note the port number (e.g., 54368) for your VM.
 
 3. **Clean up and update /etc/hosts**:
    ```bash
    # Remove all previous entries for your domain to prevent conflicts
    sudo bash -c "grep -v [sitename-tld.test] /etc/hosts > /tmp/hosts.new && echo '127.0.0.1 [sitename-tld.test] www.[sitename-tld.test]' >> /tmp/hosts.new && cat /tmp/hosts.new | sudo tee /etc/hosts"
-   ```
-   Then verify with:
-   ```bash
-   cat /etc/hosts | grep [sitename-tld.test]
-   ```
-   Ensure it shows only: `127.0.0.1 [sitename-tld.test] www.[sitename-tld.test]`
-
-4. **Update SSH config**:
-   ```bash
-   # First check if entry already exists and remove it
-   grep -v "[sitename-tld.test]" ~/.ssh/config > /tmp/ssh_config_clean
    
-   # Then add the new entry with correct port from limactl list
-   echo "Host [sitename-tld.test]
-  HostName 127.0.0.1
-  User [your-username]
-  Port PORT
-  IdentityFile ~/.lima/_config/user
-  IdentityFile ~/.ssh/id_ed25519
-  StrictHostKeyChecking accept-new
-  UserKnownHostsFile ~/.ssh/known_hosts" >> /tmp/ssh_config_clean
-  
-   # Replace the config with our clean version
-   mv /tmp/ssh_config_clean ~/.ssh/config
+   # Verify hosts file was updated correctly
+   if grep -q "[sitename-tld.test]" /etc/hosts; then
+     echo "✅ /etc/hosts updated successfully"
+   else
+     echo "❌ Failed to update /etc/hosts. Manual intervention required."
+     exit 1
+   fi
    ```
 
-5. **Test connection**:
+4. **Clear SSH known hosts and test connection**:
    ```bash
-   ssh [sitename-tld.test]
+   ssh-keygen -R [sitename-tld.test]
+   
+   # Test SSH connection (non-blocking)
+   echo "Testing SSH connection..."
+   if ssh -q -o "BatchMode=yes" -o "ConnectTimeout=5" [sitename-tld.test] exit; then
+     echo "✅ SSH connection successful!"
+   else
+     echo "❌ SSH connection failed. SSH config may need fixing."
+     echo "Showing current Lima VM status:"
+     limactl list
+     echo "Tip: The current port is $LIMA_PORT - make sure this matches in ~/.ssh/config"
+   fi
    ```
 
-6. **Troubleshooting**:
+5. **Troubleshooting**:
    - If you have ERR_ADDRESS_UNREACHABLE in Chrome but can access the site in other browsers or via curl, it's likely a hosts file conflict
    - Always ensure only one entry exists per domain in your hosts file
    - Always use 127.0.0.1 instead of the VM's IP (192.168.x.x) for local development
-   - Always use the most recent port from `limactl list`
+   - Always run the command in step 2 after VM restarts to get the updated port
    - Ensure domain in hosts file matches SSH config exactly
 
 The key is ensuring the port in your SSH config matches the current Lima VM port, and that your domain in /etc/hosts points to 127.0.0.1.
