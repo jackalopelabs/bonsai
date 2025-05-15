@@ -35,6 +35,7 @@ If we're using Radicle, the project will look like this:
 If we are using Radicle, then Trellis will be missing. That is one of the first thing's we'll install. Always use the latest release of a project or tool if unspecified.
 
 – Check to make sure the /trellis folder doesn't already exist, if not then run `php .radicle-setup/trellis.php`
+
 – `cd trellis && trellis init` (This will prompt me "What domain name should Trellis be configured for? (e.g. example.com):" Use the [sitename] for this. Wait until this is assigned before moving on to the next step.)
 – `trellis vm start` - this should provision the development server. If it doesn't run `trellis provision development`
 – Align Lima VM with /etc/hosts and SSH Config (instructions below)
@@ -114,40 +115,45 @@ Clear these files of duplicate entries for our [sitename]
    ```
    Note the port number (e.g., 54368) for your VM.
 
-3. **Update /etc/hosts**:
+3. **Clean up and update /etc/hosts**:
    ```bash
-   sudo trellis vm start
+   # Remove all previous entries for your domain to prevent conflicts
+   sudo bash -c "grep -v [sitename-tld.test] /etc/hosts > /tmp/hosts.new && echo '127.0.0.1 [sitename-tld.test] www.[sitename-tld.test]' >> /tmp/hosts.new && cat /tmp/hosts.new | sudo tee /etc/hosts"
    ```
-   This should automatically update your hosts file. Verify with:
+   Then verify with:
    ```bash
-   cat /etc/hosts | grep your-domain
+   cat /etc/hosts | grep [sitename-tld.test]
    ```
-   Ensure it shows: `127.0.0.1 your-domain.test`
+   Ensure it shows only: `127.0.0.1 [sitename-tld.test] www.[sitename-tld.test]`
 
 4. **Update SSH config**:
    ```bash
-   nano ~/.ssh/config
-   ```
-   Add or update entry (replace PORT with the number from step 2):
-   Make sure that there are not duplicate entries, if there are remove the outdated one. For the [your-username], find the system username and use that.
-   ```
-   Host your-domain.test
-     HostName 127.0.0.1
-     User [your-username]
-     Port PORT
-     IdentityFile ~/.lima/_config/user
-     IdentityFile ~/.ssh/id_ed25519
-     StrictHostKeyChecking accept-new
-     UserKnownHostsFile ~/.ssh/known_hosts
+   # First check if entry already exists and remove it
+   grep -v "[sitename-tld.test]" ~/.ssh/config > /tmp/ssh_config_clean
+   
+   # Then add the new entry with correct port from limactl list
+   echo "Host [sitename-tld.test]
+  HostName 127.0.0.1
+  User [your-username]
+  Port PORT
+  IdentityFile ~/.lima/_config/user
+  IdentityFile ~/.ssh/id_ed25519
+  StrictHostKeyChecking accept-new
+  UserKnownHostsFile ~/.ssh/known_hosts" >> /tmp/ssh_config_clean
+  
+   # Replace the config with our clean version
+   mv /tmp/ssh_config_clean ~/.ssh/config
    ```
 
 5. **Test connection**:
    ```bash
-   ssh your-domain.test
+   ssh [sitename-tld.test]
    ```
 
 6. **Troubleshooting**:
-   - If multiple entries exist for the same host, remove duplicates
+   - If you have ERR_ADDRESS_UNREACHABLE in Chrome but can access the site in other browsers or via curl, it's likely a hosts file conflict
+   - Always ensure only one entry exists per domain in your hosts file
+   - Always use 127.0.0.1 instead of the VM's IP (192.168.x.x) for local development
    - Always use the most recent port from `limactl list`
    - Ensure domain in hosts file matches SSH config exactly
 
