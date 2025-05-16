@@ -68,7 +68,8 @@ If we are using Radicle, then Trellis will be missing. That is one of the first 
 – `npm install && npm run build`
 – `composer install`
 – `composer config repositories.bonsai-cli vcs git@github.com:jackalopelabs/bonsai-cli.git`
-– `composer require jackalopelabs/bonsai-cli:dev-kanban`
+– `composer config --no-plugins allow-plugins.jackalopelabs/bonsai-cli true`
+– `composer require jackalopelabs/bonsai-cli:dev-kanban --no-interaction`
 – Configure wp-cli.yml to use the @development, @staging, and @production aliases (found below)
 – `wp @development acorn optimize:clear`
 – `wp @development acorn bonsai:init` (bonsai.sh is then added to the project, and it should already be executable)
@@ -91,7 +92,8 @@ If we're not using Radicle, and the project is empty (other than this file)– t
 - Configure `site/wp-cli.yml` to use the @development, @staging, and @production aliases
 - Activate Sage 11: `wp @development theme activate sage` (make sure this completes before moving on, run it /site directory, not project root. Do not proceed to the next step until this completes successfully. If you get `Error: Alias '@development' not found.` then you should go back to the previous step of aligning lima vm `/etc/hosts` and `.ssh/config`)
 - Go to the `site` directory and config Bonsai CLI: `composer config repositories.bonsai-cli vcs git@github.com:jackalopelabs/bonsai-cli.git`
-- Now require it: `composer require jackalopelabs/bonsai-cli:dev-kanban`
+– `composer config --no-plugins allow-plugins.jackalopelabs/bonsai-cli true`
+– `composer require jackalopelabs/bonsai-cli:dev-kanban --no-interaction`
 – `wp @development acorn optimize:clear`
 – `wp @development acorn bonsai:init` (bonsai.sh is then added to the project, and it should already be executable)
 – Bonsai Generate: `cd web/app/themes/sage && ./scripts/bonsai.sh acorn bonsai:generate chosen`
@@ -220,3 +222,198 @@ If that fails because of a permission error, ssh into the server and run–
 Uncomment out 'Run Acorn optimize' in the `trellis/deploy-hooks/build-after.yml` for the first deployment
 
 If acorn fails on build-after, then we might need to comment out trellis/deploy-hooks/build-after.yml 'Run Acorn optimize' for the first deployment. Then re-deploy– `trellis deploy staging`
+
+## Custom Bonsai Configuration
+
+After generating the chosen or bonsai components, you should ask if a custom configuration is needed:
+
+1. Ask: "Would you like to create a custom Bonsai configuration? If yes: 
+  - What would you like to name it? 
+  - What is it for?"
+
+2. If the answer is yes:
+   - Create directory (if it doesn't exist): `mkdir -p site/config/bonsai`
+   - Copy the chosen template: `cp site/vendor/jackalopelabs/bonsai-cli/config/templates/chosen.yml site/config/bonsai/[config-name].yml`
+   - Edit the configuration file to match the provided description
+   - Run: `./scripts/bonsai.sh acorn bonsai:generate [config-name]`
+
+## Gearbox Configuration
+
+If you hear "gearbox" or I ask for a Gearbox configuration, here's what Gearbox is:
+
+## 🧠 **Gearbox — Current Summary (May 2025)**
+
+**Gearbox** is a modular component of BonsaiOS that displays your favorite physical and digital tools as a **category-based heatmap grid**. It's designed to be visually compact, highly scannable, and natively Tailwind-styled for performance and portability.
+
+### ✨ What It Does Now:
+
+* Breaks your gear into clear **categories** like:
+
+  * Bags, Vehicles, Camping, Power, Electronics, Video Production, Software
+* Uses **GitHub-style square grids** to represent each item
+* Each item is represented by a **rounded square** (with hover interaction)
+* Squares are lightweight, color-coded with Tailwind utility classes
+* Fully responsive masonry layout with Tailwind's `grid-cols` logic
+* Deployed in the `.col-span-3` section of your dashboard next to Goals and Journal
+
+### 📦 Current HTML Output (drop-in ready)
+
+This HTML block represents the current state of the product in your BonsaiOS dashboard:
+
+```html
+<!-- Gearbox Categories -->
+<div class="rounded-2xl bg-white/5 p-6 backdrop-blur-sm shadow-sm col-span-3">
+  <h3 class="text-lg font-medium mb-4">Gearbox Categories</h3>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <!-- Category block -->
+    <div>
+      <h4 class="text-sm font-semibold text-white/70 mb-2">Bags</h4>
+      <div class="grid grid-rows-5 gap-[3px]" style="grid-auto-flow: column;">
+        <div title="Cotopaxi Allpa 28L" class="aspect-square w-full bg-teal-400/30 hover:bg-teal-400/80 transition rounded"></div>
+        <div title="Cotopaxi Allpa 35L" class="aspect-square w-full bg-teal-400/30 hover:bg-teal-400/80 transition rounded"></div>
+        <div title="Cotopaxi Allpa X 1.5L" class="aspect-square w-full bg-teal-400/30 hover:bg-teal-400/80 transition rounded"></div>
+        <div title="Cotopaxi Allpa X 3L" class="aspect-square w-full bg-teal-400/30 hover:bg-teal-400/80 transition rounded"></div>
+        <div title="Osprey Poco LT" class="aspect-square w-full bg-teal-400/30 hover:bg-teal-400/80 transition rounded"></div>
+        <div title="Black Diamond Halo 25L" class="aspect-square w-full bg-teal-400/30 hover:bg-teal-400/80 transition rounded"></div>
+        <div title="Black Diamond Wall Hauler 125" class="aspect-square w-full bg-teal-400/30 hover:bg-teal-400/80 transition rounded"></div>
+        <div title="Black Diamond Wall Hauler 70" class="aspect-square w-full bg-teal-400/30 hover:bg-teal-400/80 transition rounded"></div>
+      </div>
+    </div>
+    
+    <!-- Additional category blocks would go here -->
+  </div>
+</div>
+```
+
+**Note:** This code should be merged with the existing homepage layout/components/sections, not replace them.
+
+## 🌱 **Gearbox — Future Vision**
+
+> **Gearbox will evolve from a static visual index into a living memory graph and sponsor-facing toolkit.**
+
+### 🔮 Coming Soon:
+
+* Clickable squares open detail modals with:
+
+  * Usage logs
+  * AI-generated summaries
+  * Links, receipts, affiliate codes
+* Brands will be able to discover real users of their gear and sponsor them directly
+* AI coaches will reference Gearbox data in personalized suggestions
+* Data can be exported, shared publicly (or monetized privately), and version-controlled
+
+### Manual Implementation Instructions
+
+For Gearbox, follow these steps instead of trying to use the bonsai:generate command:
+
+1. Create a custom component for Gearbox:
+   ```bash
+   mkdir -p resources/views/bonsai/components/chosen
+   ```
+
+2. Create the Gearbox component file (resources/views/bonsai/components/chosen/gearbox.blade.php):
+   ```php
+   @props([
+       'title' => 'Gearbox Categories',
+       'containerClasses' => 'rounded-2xl bg-white/5 p-6 backdrop-blur-sm shadow-sm col-span-3',
+       'titleClasses' => 'text-lg font-medium mb-4',
+       'gridClasses' => 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6',
+       'categories' => [],
+       'categoryStyles' => [
+           'titleClass' => 'text-sm font-semibold text-white/70 mb-2',
+           'gridClass' => 'grid grid-rows-5 gap-[3px]',
+           'gridStyle' => 'grid-auto-flow: column;',
+           'itemClass' => 'aspect-square w-full bg-{color}-500/30 hover:bg-{color}-500/80 transition rounded'
+       ]
+   ])
+
+   <div class="{{ $containerClasses }}">
+     <h3 class="{{ $titleClasses }}">{{ $title }}</h3>
+
+     <div class="{{ $gridClasses }}">
+       @foreach($categories as $category)
+         <!-- {{ $category['name'] }} category -->
+         <div>
+           <h4 class="{{ $categoryStyles['titleClass'] }}">{{ $category['name'] }}</h4>
+           <div class="{{ $categoryStyles['gridClass'] }}" style="{{ $categoryStyles['gridStyle'] }}">
+             @foreach($category['items'] as $item)
+               @php
+                 $itemClass = str_replace('{color}', $category['colorClass'], $categoryStyles['itemClass']);
+               @endphp
+               <div title="{{ $item }}" class="{{ $itemClass }}"></div>
+             @endforeach
+           </div>
+         </div>
+       @endforeach
+     </div>
+   </div>
+   ```
+
+3. Create a section to include the Gearbox (resources/views/bonsai/sections/gearbox_section.blade.php):
+   ```php
+   <!-- Gearbox Section -->
+   <div class="max-w-7xl mx-auto px-4 py-8">
+     <x-bonsai::chosen.gearbox 
+       :categories="[
+         [
+           'name' => 'Bags',
+           'colorClass' => 'teal',
+           'items' => [
+             'Cotopaxi Allpa 28L',
+             'Cotopaxi Allpa 35L',
+             'Cotopaxi Allpa X 1.5L',
+             'Cotopaxi Allpa X 3L',
+             'Osprey Poco LT',
+             'Black Diamond Halo 25L',
+             'Black Diamond Wall Hauler 125',
+             'Black Diamond Wall Hauler 70'
+           ]
+         ],
+         [
+           'name' => 'Vehicles',
+           'colorClass' => 'blue',
+           'items' => [
+             '2018 Toyota 4Runner TRD Off-Road',
+             '2025 Forest River Cherokee Wolf Pup 16bhsbl'
+           ]
+         ],
+         // Add more categories as needed
+       ]"
+     />
+   </div>
+   ```
+
+4. Create a page template for the Gearbox (resources/views/bonsai/templates/gearbox-page.blade.php):
+   ```php
+   @extends('layouts.app')
+
+   @section('content')
+     <div class="dark bg-gray-900 min-h-screen text-white">
+       @include('bonsai.sections.site_header')
+       
+       <div class="container mx-auto py-10">
+         <h1 class="text-4xl font-bold mb-8 text-center">Gearbox Dashboard</h1>
+         <p class="text-xl text-gray-300 mb-10 text-center max-w-4xl mx-auto">
+           A visual collection of all my favorite physical and digital tools.
+         </p>
+         
+         @include('bonsai.sections.gearbox_section')
+       </div>
+       
+       @include('bonsai.sections.site_footer')
+     </div>
+   @endsection
+   ```
+
+5. Create a page that uses the template (resources/views/pages/gearbox.blade.php):
+   ```php
+   @include('bonsai.templates.gearbox-page')
+   ```
+
+6. Build the assets with:
+   ```bash
+   yarn build
+   ```
+
+7. Access the page at: `https://bonsai.test/gearbox/`
