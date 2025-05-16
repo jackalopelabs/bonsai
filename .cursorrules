@@ -14,6 +14,33 @@ The [sitename] is your desired URL, and will be used in the wp-cli.yml config su
 Provided [sitename] and [projectname]:
 [sitename]=`bonsai.so`
 [projectname]=`bonsai`
+[your-username]=`masonlawlor`
+
+⚠️⚠️⚠️ CRITICAL FIRST STEP - DO NOT PROCEED WITHOUT COMPLETING THIS ⚠️⚠️⚠️
++------------------------------------------------------------------+
+|                     ⚡ REQUIRED FIRST STEP ⚡                     |
+|                                                                 |
+| Create a file called clean-bonsai.sh with these contents:       |
+|                                                                 |
+| #!/bin/bash                                                     |
+|                                                                 |
+| # Clean hosts file                                              |
+| sudo sed -i '' "/bonsai.test/d" /etc/hosts                      |
+|                                                                 |
+| # Backup SSH config                                             |
+| cp ~/.ssh/config ~/.ssh/config.bak 2>/dev/null || true          |
+|                                                                 |
+| # Clean SSH config                                              |
+| grep -v "bonsai.test" ~/.ssh/config > /tmp/ssh_config_clean 2>/dev/null || true |
+| cat /tmp/ssh_config_clean | sudo tee ~/.ssh/config >/dev/null   |
+|                                                                 |
+| echo "✅ Cleaned bonsai.test entries from hosts and SSH config" |
+| echo "📝 SSH config backup created at ~/.ssh/config.bak"        |
+|                                                                 |
+| Then run:                                                       |
+| 1. Make it executable: chmod +x clean-bonsai.sh                 |
+| 2. Run it: ./clean-bonsai.sh                                    |
++------------------------------------------------------------------+
 
 Before getting started, make sure that Trellis CLI is installed: `trellis --version`
 
@@ -35,7 +62,6 @@ If we're using Radicle, the project will look like this:
 If we are using Radicle, then Trellis will be missing. That is one of the first thing's we'll install. Always use the latest release of a project or tool if unspecified.
 
 – Check to make sure the /trellis folder doesn't already exist, if not then run `php .radicle-setup/trellis.php`
-
 – `cd trellis && trellis init` (This will prompt me "What domain name should Trellis be configured for? (e.g. example.com):" Use the [sitename] for this. Wait until this is assigned before moving on to the next step.)
 – `trellis vm start` - this should provision the development server. If it doesn't run `trellis provision development`
 – Align Lima VM with /etc/hosts and SSH Config (instructions below)
@@ -50,7 +76,7 @@ If we are using Radicle, then Trellis will be missing. That is one of the first 
 
 If we're not using Radicle, and the project is empty (other than this file)– this will be your operating procedure, which is different than the Radicle process.
 
-- Install Trellis and Bedrock: `trellis new [sitename]` (Give this a minute to run before re-trying. If this command isn't found, try running– `brew install roots/tap/trellis-cli`) Make sure this process is complete before moving on.
+- Install Trellis and Bedrock: `trellis new --force --name [sitename] --host [sitename] .` (Give this a minute to run before re-trying. If this command isn't found, try running– `brew install roots/tap/trellis-cli`) Make sure this process is complete before moving on.
 - Move the contents (site + app) of [projectname]/[sitename] into the project root: `mv chosen.bonsai.so/site chosen.bonsai.so/trellis . && rmdir chosen.bonsai.so`
 - Install Sage 11: `cd site/web/app/themes && composer create-project roots/sage`
 - Build theme assets: `cd sage && npm install && npm run build`
@@ -60,7 +86,7 @@ If we're not using Radicle, and the project is empty (other than this file)– t
 - Start Lima VM (which will provision development): `trellis vm start` (Make sure this completes before moving on)
 - Connect to development server: `trellis vm shell`
 – Run: `ssh-keygen -R [sitename-tld.test]`
-- Run: `ssh [sitename-tld.test]` to test whether we can connect to our Lima vm
+- Run: `ssh-keygen -R [sitename-tld.test] && ssh -o StrictHostKeyChecking=accept-new [sitename-tld.test]` to test whether we can connect to our Lima vm
 - If that ssh connection worked, then move onto configuring `wp-cli.yml`. If not, then you need to align the Lima VM with /etc/hosts and SSH Config (instructions below)
 - Configure `site/wp-cli.yml` to use the @development, @staging, and @production aliases
 - Activate Sage 11: `wp @development theme activate sage` (make sure this completes before moving on, run it /site directory, not project root. Do not proceed to the next step until this completes successfully. If you get `Error: Alias '@development' not found.` then you should go back to the previous step of aligning lima vm `/etc/hosts` and `.ssh/config`)
@@ -109,74 +135,47 @@ Clear these files of duplicate entries for our [sitename]
    trellis vm sudoers | sudo tee /etc/sudoers.d/trellis
    ```
 
-2. **Get current Lima VM port and update SSH config in one step**:
+2. **Get current Lima VM port**:
    ```bash
-   # Check if VM is running first
-   if ! limactl list | grep "[projectname].so" | grep -q "Running"; then
-     echo "Lima VM for [projectname].so is not running. Starting it now..."
-     trellis vm start
-   fi
-   
-   # Get the current port (will only proceed if VM is running)
-   LIMA_PORT=$(limactl list | grep "[projectname].so" | grep "Running" | awk '{print $3}' | cut -d':' -f2)
-   
-   if [ -z "$LIMA_PORT" ]; then
-     echo "Error: Could not determine Lima VM port. Check if VM is running with 'limactl list'"
-     exit 1
-   fi
-   
-   # Remove existing entry first
-   grep -v "[sitename-tld.test]" ~/.ssh/config > /tmp/ssh_config_clean
-   
-   # Add new entry with current port
-   echo "Host [sitename-tld.test]
-  HostName 127.0.0.1
-  User $USER
-  Port $LIMA_PORT
-  IdentityFile ~/.lima/_config/user
-  IdentityFile ~/.ssh/id_ed25519
-  StrictHostKeyChecking accept-new
-  UserKnownHostsFile ~/.ssh/known_hosts" >> /tmp/ssh_config_clean
-   
-   mv /tmp/ssh_config_clean ~/.ssh/config
-   echo "✅ Updated SSH config with Lima port: $LIMA_PORT"
+   limactl list
+   ```
+   Note the port number (e.g., 54368) for your VM.
+
+3. **Update /etc/hosts**:
+   ```bash
+   sudo trellis vm start
+   ```
+   This should automatically update your hosts file. Verify with:
+   ```bash
+   cat /etc/hosts | grep your-domain
+   ```
+   Ensure it shows: `127.0.0.1 your-domain.test`
+
+4. **Update SSH config**:
+   ```bash
+   nano ~/.ssh/config
+   ```
+   Add or update entry (replace PORT with the number from step 2):
+   Make sure that there are not duplicate entries, if there are remove the outdated one. For the [your-username], find the system username and use that.
+   ```
+   Host your-domain.test
+     HostName 127.0.0.1
+     User [your-username]
+     Port PORT
+     IdentityFile ~/.lima/_config/user
+     IdentityFile ~/.ssh/id_ed25519
+     StrictHostKeyChecking accept-new
+     UserKnownHostsFile ~/.ssh/known_hosts
    ```
 
-3. **Clean up and update /etc/hosts**:
+5. **Test connection**:
    ```bash
-   # Remove all previous entries for your domain to prevent conflicts
-   sudo bash -c "grep -v [sitename-tld.test] /etc/hosts > /tmp/hosts.new && echo '127.0.0.1 [sitename-tld.test] www.[sitename-tld.test]' >> /tmp/hosts.new && cat /tmp/hosts.new | sudo tee /etc/hosts"
-   
-   # Verify hosts file was updated correctly
-   if grep -q "[sitename-tld.test]" /etc/hosts; then
-     echo "✅ /etc/hosts updated successfully"
-   else
-     echo "❌ Failed to update /etc/hosts. Manual intervention required."
-     exit 1
-   fi
+   ssh your-domain.test
    ```
 
-4. **Clear SSH known hosts and test connection**:
-   ```bash
-   ssh-keygen -R [sitename-tld.test]
-   
-   # Test SSH connection (non-blocking)
-   echo "Testing SSH connection..."
-   if ssh -q -o "BatchMode=yes" -o "ConnectTimeout=5" [sitename-tld.test] exit; then
-     echo "✅ SSH connection successful!"
-   else
-     echo "❌ SSH connection failed. SSH config may need fixing."
-     echo "Showing current Lima VM status:"
-     limactl list
-     echo "Tip: The current port is $LIMA_PORT - make sure this matches in ~/.ssh/config"
-   fi
-   ```
-
-5. **Troubleshooting**:
-   - If you have ERR_ADDRESS_UNREACHABLE in Chrome but can access the site in other browsers or via curl, it's likely a hosts file conflict
-   - Always ensure only one entry exists per domain in your hosts file
-   - Always use 127.0.0.1 instead of the VM's IP (192.168.x.x) for local development
-   - Always run the command in step 2 after VM restarts to get the updated port
+6. **Troubleshooting**:
+   - If multiple entries exist for the same host, remove duplicates
+   - Always use the most recent port from `limactl list`
    - Ensure domain in hosts file matches SSH config exactly
 
 The key is ensuring the port in your SSH config matches the current Lima VM port, and that your domain in /etc/hosts points to 127.0.0.1.
